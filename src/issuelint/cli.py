@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from issuelint import __version__
+from issuelint.agreement import agreement, format_agreement, load_findings, load_labels
 from issuelint.checks import Thresholds, run_all
 from issuelint.records import RecordError, load_records
 from issuelint.report import explain, summary, table, to_csv, to_json, to_markdown
@@ -84,11 +85,40 @@ def build_parser() -> argparse.ArgumentParser:
         default=d.max_evidence,
         help=f"evidence lines kept per finding ({d.max_evidence})",
     )
+    agree = sub.add_parser(
+        "agree", help="compare scores from 'check --json' with human labels in a CSV"
+    )
+    agree.add_argument("findings", type=Path, help="JSON written by issuelint check --json")
+    agree.add_argument("labels", type=Path, help="CSV with one row per task")
+    agree.add_argument("--label", required=True, help="numeric label column")
+    agree.add_argument(
+        "--positive-at",
+        type=float,
+        default=1.0,
+        help="a task is positive when its label is at least this (1)",
+    )
+    agree.add_argument("--id-column", default="instance_id", help="id column (instance_id)")
+    agree.add_argument("--resamples", type=int, default=1000, help="bootstrap resamples (1000)")
+    agree.add_argument("--seed", type=int, default=0, help="bootstrap seed (0)")
     return parser
+
+
+def _agree(args: argparse.Namespace) -> int:
+    try:
+        reports = load_findings(args.findings)
+        labels = load_labels(args.labels, args.label, args.id_column)
+    except (ValueError, OSError) as exc:
+        print(f"issuelint: {exc}", file=sys.stderr)
+        return 2
+    rows = agreement(reports, labels, args.positive_at, args.resamples, args.seed)
+    print(format_agreement(rows, args.label, args.positive_at))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "agree":
+        return _agree(args)
     thresholds = Thresholds(
         ngram=args.ngram,
         solution_leakage=args.solution_leakage,
