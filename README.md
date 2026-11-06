@@ -83,8 +83,10 @@ per-check shares with example ids; `--examples N` adds up to N example ids
 per check to the printed summary; `--with-hints` reads the hints together
 with the issue; `--limit N` checks the first N records; `--fail-on-flag`
 exits 1 when any check other than `location_hints` flags a task; an
-unreadable input file or an out-of-range option exits 2 with a one-line
-error, so CI can tell the two apart. Every
+unreadable input file (missing, not UTF-8, not JSON, not Parquet), an
+output file that cannot be written (checked before the run) or an
+out-of-range option exits 2 with a one-line error, so CI can tell the two
+apart. Every
 cut-off is a flag (`--ngram`, `--solution-leakage`, `--test-leakage`,
 `--underspecification`, `--scope-gap`, `--min-issue-tokens`,
 `--max-evidence`); `issuelint check --help` lists the defaults.

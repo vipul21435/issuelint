@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -27,6 +28,18 @@ def _count(minimum: int) -> Callable[[str], int]:
         return value
 
     return parse
+
+
+def _unwritable(path: Path) -> str | None:
+    """Why ``path`` cannot be written, checked before any work is done; None if it can."""
+    parent = path.parent if str(path.parent) else Path()
+    if path.is_dir():
+        return "is a directory"
+    if not parent.is_dir():
+        return f"directory {parent} does not exist"
+    if not os.access(parent, os.W_OK):
+        return f"directory {parent} is not writable"
+    return None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -156,6 +169,12 @@ def main(argv: list[str] | None = None) -> int:
         max_evidence=args.max_evidence,
         with_hints=args.with_hints,
     )
+    outputs = [p for p in (args.markdown, args.json, args.csv) if p is not None]
+    for path in outputs:
+        problem = _unwritable(path)
+        if problem:
+            print(f"issuelint: cannot write {path}: {problem}", file=sys.stderr)
+            return 2
     try:
         records = load_records(args.input, limit=args.limit)
     except (RecordError, OSError) as exc:
@@ -172,12 +191,19 @@ def main(argv: list[str] | None = None) -> int:
             print(explain(r))
             print()
     print(summary(reports, examples=args.examples))
-    if args.markdown:
-        args.markdown.write_text(to_markdown(reports, max(args.examples, 3)), encoding="utf-8")
-    if args.json:
-        args.json.write_text(to_json(reports), encoding="utf-8")
-    if args.csv:
-        args.csv.write_text(to_csv(reports), encoding="utf-8")
+    writes = [
+        (args.markdown, lambda: to_markdown(reports, max(args.examples, 3))),
+        (args.json, lambda: to_json(reports)),
+        (args.csv, lambda: to_csv(reports)),
+    ]
+    for path, render in writes:
+        if path is None:
+            continue
+        try:
+            path.write_text(render(), encoding="utf-8")
+        except OSError as exc:
+            print(f"issuelint: cannot write {path}: {exc.strerror or exc}", file=sys.stderr)
+            return 2
     if args.fail_on_flag and any(f for r in reports for f in r.flags if f != "location_hints"):
         return 1
     return 0

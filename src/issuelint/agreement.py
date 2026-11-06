@@ -110,10 +110,29 @@ def load_labels(path: str | Path, label: str, id_column: str = "instance_id") ->
 
 
 def load_findings(path: str | Path) -> list[dict[str, object]]:
-    """Read the list written by ``issuelint check --json``."""
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    """Read the list written by ``issuelint check --json``.
+
+    Raises ``ValueError`` naming the first item that is not a task report: an
+    object with an ``id`` and a list of ``findings``, each with ``check``,
+    ``score`` and ``flagged``.
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path}: not JSON ({exc.msg}, line {exc.lineno})") from exc
     if not isinstance(data, list):
         raise ValueError(f"{path}: expected a list of task reports")
+    for i, item in enumerate(data, start=1):
+        if not isinstance(item, dict) or "id" not in item:
+            raise ValueError(f"{path}: item {i} is not an object with an 'id'")
+        findings = item.get("findings")
+        if not isinstance(findings, list) or not all(
+            isinstance(f, dict) and {"check", "score", "flagged"} <= set(f) for f in findings
+        ):
+            raise ValueError(
+                f"{path}: item {i} needs a 'findings' list of objects "
+                "with 'check', 'score' and 'flagged'"
+            )
     return data
 
 

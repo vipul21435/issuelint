@@ -138,7 +138,13 @@ def load_parquet(path: str | Path) -> list[TaskRecord]:
         raise RecordError(
             "reading .parquet needs pyarrow: pip install 'issuelint[parquet]'"
         ) from exc
-    rows = pq.read_table(Path(path)).to_pylist()
+    try:
+        rows = pq.read_table(Path(path)).to_pylist()
+    except OSError:
+        raise
+    except Exception as exc:  # pyarrow raises its own error types for bad files
+        first = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+        raise RecordError(f"{path}: not a readable Parquet file ({first})") from exc
     return [record_from_dict(row, default_id=f"row-{i}") for i, row in enumerate(rows, start=1)]
 
 
@@ -148,14 +154,17 @@ def load_records(path: str | Path, limit: int | None = None) -> list[TaskRecord]
     ``limit`` keeps the first records only; ids must be unique across the file.
     """
     suffix = Path(path).suffix.lower()
-    if suffix == ".jsonl":
-        records = load_jsonl(path)
-    elif suffix == ".json":
-        records = load_json(path)
-    elif suffix == ".parquet":
-        records = load_parquet(path)
-    else:
-        raise RecordError(f"unsupported input {path}: expected .jsonl, .json or .parquet")
+    try:
+        if suffix == ".jsonl":
+            records = load_jsonl(path)
+        elif suffix == ".json":
+            records = load_json(path)
+        elif suffix == ".parquet":
+            records = load_parquet(path)
+        else:
+            raise RecordError(f"unsupported input {path}: expected .jsonl, .json or .parquet")
+    except UnicodeDecodeError as exc:
+        raise RecordError(f"{path}: not UTF-8 text (bad byte at offset {exc.start})") from exc
     seen: set[str] = set()
     for record in records:
         if record.id in seen:

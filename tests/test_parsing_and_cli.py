@@ -381,3 +381,54 @@ def test_backtick_heavy_text_is_linear():
     code_blocks("```" * 70_000)
     inline_code("```" * 70_000)
     assert time.perf_counter() - start < 1.0
+
+
+@pytest.mark.parametrize("option", ["--json", "--csv", "--markdown"])
+def test_unwritable_output_exits_2_before_any_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], option: str
+):
+    target = tmp_path / "missing" / "out.txt"
+    assert main(["check", str(SAMPLE), "--quiet", option, str(target)]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "missing" in captured.err
+    assert len(captured.err.strip().splitlines()) == 1
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "message"),
+    [
+        ("bad.jsonl", b'\xff\xfe{"id": 1}\n', "UTF-8"),
+        ("bad.json", b"\xff\xfe[]", "UTF-8"),
+        ("bad.parquet", b"not parquet", "Parquet"),
+    ],
+)
+def test_undecodable_input_exits_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], name: str, content: bytes, message: str
+):
+    path = tmp_path / name
+    path.write_bytes(content)
+    assert main(["check", str(path), "--quiet"]) == 2
+    err = capsys.readouterr().err
+    assert message in err
+    assert len(err.strip().splitlines()) == 1
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("[1, 2]", "item 1"),
+        ('[{"id": "a"}]', "item 1"),
+        ('[{"id": "a", "findings": [{"check": "x"}]}]', "item 1"),
+        ("{bad", "not JSON"),
+    ],
+)
+def test_agree_rejects_malformed_findings(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], content: str, message: str
+):
+    findings = tmp_path / "f.json"
+    findings.write_text(content, encoding="utf-8")
+    labels = tmp_path / "l.csv"
+    labels.write_text("instance_id,l\na,1\n", encoding="utf-8")
+    assert main(["agree", str(findings), str(labels), "--label", "l"]) == 2
+    assert message in capsys.readouterr().err
