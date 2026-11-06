@@ -26,6 +26,14 @@
   rejects non-finite scores and labels.
 - `test_names_from_ids` is renamed `names_from_test_ids`, so pytest does not
   collect it when imported into a test module.
+- `scope_gap.tests_use_new_names` no longer counts language keywords and
+  builtins (`def`, `self`, `None`, `func`, `err`).
+- `agree` rejects a labels CSV that repeats a task id (a file with one row
+  per annotator) instead of keeping the last row.
+- Fenced blocks marked `diff` or `patch`, or holding a diff header, lose
+  their `+`/space prefixes and removed lines, as unfenced diffs do.
+- A `.json` file of one object per line is read as JSON Lines, and row-level
+  input errors name their line, record or row.
 - Results in the README and `docs/results.md` were rerun.
 
 ## 0.1.0
