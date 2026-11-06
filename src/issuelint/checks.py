@@ -293,24 +293,49 @@ def check_external_links(record: TaskRecord, _patch: ParsedPatch, t: Thresholds)
     )
 
 
-def check_scope_gap(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Finding:
+def check_scope_gap(
+    record: TaskRecord,
+    patch: ParsedPatch,
+    t: Thresholds,
+    test_patch: ParsedPatch | None = None,
+) -> Finding:
+    """Changed identifiers the issue never names.
+
+    Also reported, without changing the score: names the gold patch introduces
+    that the added tests use while the issue never mentions them. The SWE-bench
+    Verified annotation instructions single these out as the most common reason
+    a test rejects a reasonable solution.
+    """
     idents = patch.changed_identifiers()
     if not idents:
         return Finding("scope_gap", 0.0, False, "patch changes no named definitions")
     issue_words = words(record.issue)
     unmentioned = [name for name in idents if not mentions(issue_words, name)]
+    test_words = words("\n".join(test_patch.added_lines())) if test_patch else set()
+    needed = [
+        name
+        for name in patch.new_identifiers()
+        if name in test_words and not mentions(issue_words, name)
+    ]
     score = len(unmentioned) / len(idents)
     summary = (
         f"{len(unmentioned)} of {len(idents)} changed identifiers never mentioned in the issue"
     )
-    evidence = [f"changed but not mentioned: {name}" for name in unmentioned]
+    evidence = [
+        *(f"tests use {name}, new in the gold patch and absent from the issue" for name in needed),
+        *(f"changed but not mentioned: {name}" for name in unmentioned if name not in needed),
+    ]
     return Finding(
         "scope_gap",
         score,
         score >= t.scope_gap,
         summary,
         _cap(evidence, t.max_evidence),
-        {"unmentioned": len(unmentioned), "identifiers": len(idents)},
+        {
+            "unmentioned": len(unmentioned),
+            "identifiers": len(idents),
+            "tests_use_new_names": len(needed),
+        },
     )
 
 
@@ -339,7 +364,7 @@ def run_checks(record: TaskRecord, thresholds: Thresholds | None = None) -> Task
         check_location_hints(record, patch, t),
         check_underspecification(record, patch, t),
         check_external_links(record, patch, t),
-        check_scope_gap(record, patch, t),
+        check_scope_gap(record, patch, t, test_patch),
     ]
     return TaskReport(id=record.id, findings=findings)
 

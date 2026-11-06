@@ -78,6 +78,22 @@ class ParsedPatch:
                         break
         return list(seen)
 
+    def new_identifiers(self) -> list[str]:
+        """Names defined on added non-test lines and on no removed line: what the fix introduces."""
+
+        def defined(lines: list[str]) -> dict[str, None]:
+            found: dict[str, None] = {}
+            for line in lines:
+                for pattern in _DEF_RES:
+                    match = pattern.match(line)
+                    if match:
+                        found.setdefault(match.group("name"), None)
+                        break
+            return found
+
+        removed = defined(self.removed_lines(include_tests=False))
+        return [n for n in defined(self.added_lines(include_tests=False)) if n not in removed]
+
 
 def parse_patch(text: str) -> ParsedPatch:
     """Parse a unified diff. Lines outside hunks are ignored except file headers."""

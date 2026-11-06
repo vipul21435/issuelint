@@ -174,3 +174,27 @@ def test_findings_carry_counts_in_metrics():
     assert set(under) == {"has_reproduction", "has_expected_actual", "has_error_text", "tokens"}
     sol = report.finding("solution_leakage").metrics
     assert sol["shared_ngrams"] <= sol["added_ngrams"]
+
+
+def test_scope_gap_reports_new_names_the_tests_rely_on():
+    from issuelint.records import TaskRecord
+
+    patch = (
+        "--- a/pkg/core.py\n+++ b/pkg/core.py\n@@ -1,2 +1,4 @@ def load(path):\n"
+        "-    def old_helper():\n+    def parse_header(raw):\n+        return raw\n"
+    )
+    test_patch = (
+        "--- a/tests/test_core.py\n+++ b/tests/test_core.py\n@@ -1 +1,2 @@\n"
+        "+def test_header():\n+    assert parse_header(b'x') == b'x'\n"
+    )
+    record = TaskRecord(
+        id="t",
+        issue="load(path) crashes on files with a header",
+        patch=patch,
+        test_patch=test_patch,
+    )
+    f = run_checks(record).finding("scope_gap")
+    assert f.metrics["tests_use_new_names"] == 1
+    assert f.evidence[0].startswith("tests use parse_header")
+    assert f.metrics["identifiers"] == 3
+    assert f.metrics["unmentioned"] == 2
