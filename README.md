@@ -1,13 +1,7 @@
 # issuelint
 
 Check issue-to-fix task records for solution leaks, test leaks, location hints,
-underspecification and scope gaps before they become benchmark items.
-
-Status: first version. The six checks run end to end on JSONL input and on
-records in the SWE-bench field layout, with a table, per-task evidence, JSON
-and CSV output. The run on real public data (SWE-bench Lite) and the
-comparison with published leakage analyses are not in this version; see
-Limitations.
+underspecification, external links and scope gaps before they become benchmark items.
 
 ## Why this is hard
 
@@ -27,14 +21,21 @@ output is the evidence (which line, which name) rather than a verdict.
 pip install git+https://github.com/vipul21435/issuelint
 ```
 
-Python 3.10 or later, no dependencies outside the standard library.
+Python 3.10 or later, no dependencies outside the standard library. Reading
+the Parquet files that SWE-bench splits are published in needs `pyarrow`:
+
+```
+pip install "issuelint[parquet] @ git+https://github.com/vipul21435/issuelint"
+```
 
 ## Quickstart
 
-Input is a `.jsonl` (one object per line) or `.json` file. Each record has an
-issue, a gold patch and, optionally, a test patch; both the plain keys
-(`id`, `issue`, `patch`, `test_patch`) and the SWE-bench keys (`instance_id`,
-`problem_statement`, `patch`, `test_patch`) are read.
+Input is a `.jsonl` (one object per line), `.json` or `.parquet` file. Each
+record has an issue, a gold patch and, optionally, a test patch and hints;
+both the plain keys (`id`, `issue`, `patch`, `test_patch`, `hints`) and the
+SWE-bench keys (`instance_id`, `problem_statement`, `patch`, `test_patch`,
+`hints_text`) are read, so a SWE-bench split downloaded from Hugging Face is
+checked as it is.
 
 ```
 $ issuelint check examples/sample.jsonl
@@ -45,12 +46,12 @@ leaky-tests        0.00      1.00*     0.50      0.00      0.00      0.00   1
 vague-link         0.00      0.00      0.00      1.00*     1.00*     1.00*  3
 
 4 task(s)
-  solution_leakage     flagged    1 ( 25.0%)  mean score 0.250
-  test_leakage         flagged    1 ( 25.0%)  mean score 0.250
-  location_hints       flagged    0 (  0.0%)  mean score 0.375
-  underspecification   flagged    1 ( 25.0%)  mean score 0.250
-  external_links       flagged    1 ( 25.0%)  mean score 0.250
-  scope_gap            flagged    1 ( 25.0%)  mean score 0.250
+  solution_leakage     flagged    1 ( 25.0%)  nonzero    1 ( 25.0%)  mean score 0.250
+  test_leakage         flagged    1 ( 25.0%)  nonzero    1 ( 25.0%)  mean score 0.250
+  location_hints       flagged    0 (  0.0%)  nonzero    3 ( 75.0%)  mean score 0.375
+  underspecification   flagged    1 ( 25.0%)  nonzero    1 ( 25.0%)  mean score 0.250
+  external_links       flagged    1 ( 25.0%)  nonzero    1 ( 25.0%)  mean score 0.250
+  scope_gap            flagged    1 ( 25.0%)  nonzero    1 ( 25.0%)  mean score 0.250
 ```
 
 A `*` marks a flagged check. `--explain` prints the evidence behind every
@@ -59,7 +60,7 @@ score; this is the block for one task:
 ```
 $ issuelint check examples/sample.jsonl --explain --quiet
 leaky-tests
-       solution_leakage     0.00  0 of 15 added-code 6-grams appear in the issue's code
+       solution_leakage     0.00  0 of 9 added-code 6-grams appear in the issue's code
   FLAG test_leakage         1.00  3 of 3 (1 test names, 2 assertions) already in the issue
          - issue names the added test: test_kelvin_and_celsius
          - issue contains the added assertion: assert to_celsius(273.15, "K") == 0
@@ -71,12 +72,19 @@ leaky-tests
        scope_gap            0.00  0 of 1 changed identifiers never mentioned in the issue
 ```
 
-`--json FILE` and `--csv FILE` write the same findings as data;
-`--fail-on-flag` exits 1 when any check other than `location_hints` flags a
-task. Every cut-off is a flag (`--ngram`, `--solution-leakage`,
-`--test-leakage`, `--underspecification`, `--scope-gap`,
-`--min-issue-tokens`, `--max-evidence`); `issuelint check --help` lists the
-defaults.
+`--json FILE` and `--csv FILE` write the same findings as data (the JSON
+also carries the counts behind every score); `--markdown FILE` writes the
+per-check shares with example ids; `--examples N` adds up to N example ids
+per check to the printed summary; `--with-hints` reads the hints together
+with the issue; `--limit N` checks the first N records; `--fail-on-flag`
+exits 1 when any check other than `location_hints` flags a task. Every
+cut-off is a flag (`--ngram`, `--solution-leakage`, `--test-leakage`,
+`--underspecification`, `--scope-gap`, `--min-issue-tokens`,
+`--max-evidence`); `issuelint check --help` lists the defaults.
+
+`issuelint agree FINDINGS.json LABELS.csv --label COLUMN --positive-at X`
+compares every score and count in a `check --json` file with a numeric
+human label per task (see "Agreement with human labels" below).
 
 From Python:
 
@@ -89,7 +97,9 @@ reports = run_all(load_records("examples/sample.jsonl"))
 print(explain(reports[1]))
 ```
 
-`examples/run_sample.py` does the same and prints the flagged tasks.
+`examples/run_sample.py` does the same and prints the flagged tasks and the
+Markdown summary; `examples/swebench_analysis.py` produces the results
+section below.
 
 ## How it works
 
