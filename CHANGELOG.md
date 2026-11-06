@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Plain multi-file unified diffs without `diff --git` lines are split by
+  file: a hunk ends when the line counts in its `@@` header are used up, or
+  at the next `---`/`+++`/`@@` header triple when the counts are wrong.
+- Malformed `.json` input, a `.json` list of non-objects and out-of-range
+  counts (`--ngram 0`, `--limit -1`) exit 2 with a one-line error instead of
+  a traceback.
+- `test_leakage` leaves assertion lines shorter than one n-gram out of its
+  total; results in the README and `docs/results.md` were rerun.
+- The package ships a `py.typed` marker.
+
 ## 0.1.0
 
 First version.
