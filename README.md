@@ -143,7 +143,7 @@ with:
 from issuelint.records import load_records
 from issuelint.text import tokens
 
-rs = load_records(f"{DATA}/full/test.parquet")
+rs = load_records("../issuelint-data/full/test.parquet")  # DATA, see "Results" below
 print(sum(len(tokens(r.issue)) < 40 for r in rs), sum(len(r.issue.split()) < 40 for r in rs))
 ```
 
@@ -213,22 +213,23 @@ dataset text is committed, only counts, shares and instance ids.
 | SWE-bench Verified annotations | 1699 labelled tasks | [annotation results](https://cdn.openai.com/introducing-swe-bench-verified/swe-bench-annotation-results.zip), file `ensembled_annotations_public.csv` | no licence stated with the file |
 
 ```
-mkdir -p data/lite data/verified data/full data/swebench_plus data/annotations
+DATA=../issuelint-data   # outside the repository; data/ is also git-ignored
+mkdir -p $DATA/lite $DATA/verified $DATA/full $DATA/swebench_plus $DATA/annotations
 HF=https://huggingface.co/datasets/princeton-nlp
-curl -L -o data/lite/test.parquet $HF/SWE-bench_Lite/resolve/main/data/test-00000-of-00001.parquet
-curl -L -o data/verified/test.parquet $HF/SWE-bench_Verified/resolve/main/data/test-00000-of-00001.parquet
-curl -L -o data/full/test.parquet $HF/SWE-bench/resolve/main/data/test-00000-of-00001.parquet
-curl -L -o data/swebench_plus/data.json \
+curl -L -o $DATA/lite/test.parquet $HF/SWE-bench_Lite/resolve/main/data/test-00000-of-00001.parquet
+curl -L -o $DATA/verified/test.parquet $HF/SWE-bench_Verified/resolve/main/data/test-00000-of-00001.parquet
+curl -L -o $DATA/full/test.parquet $HF/SWE-bench/resolve/main/data/test-00000-of-00001.parquet
+curl -L -o $DATA/swebench_plus/data.json \
   "https://zenodo.org/api/records/13879453/files/swe_bench+_data.json/content"
-curl -L -o data/annotations/results.zip \
+curl -L -o $DATA/annotations/results.zip \
   https://cdn.openai.com/introducing-swe-bench-verified/swe-bench-annotation-results.zip
-unzip data/annotations/results.zip -d data/annotations/results
+unzip $DATA/annotations/results.zip -d $DATA/annotations/results
 ```
 
 **SWE-bench Lite.**
 
 ```
-$ issuelint check data/lite/test.parquet --quiet --examples 3
+$ issuelint check $DATA/lite/test.parquet --quiet --examples 3
 300 task(s)
   solution_leakage     flagged   16 (  5.3%)  nonzero   24 (  8.0%)  mean score 0.035
                        e.g. django__django-14534, django__django-16255, pytest-dev__pytest-5227
@@ -243,7 +244,7 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
                        e.g. astropy__astropy-12907, astropy__astropy-14365, astropy__astropy-14995
 ```
 
-**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py data --out docs/results.md --chart docs/signal_shares.png`, 57 s on a laptop; the output is the same on every run):
+**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py $DATA --out docs/results.md --chart docs/signal_shares.png`, 57 s on a laptop; the output is the same on every run):
 
 | check, tasks flagged | Lite (300) | Verified (500) | SWE-bench test (2294) | SWE-Bench+ (548) |
 | --- | ---: | ---: | ---: | ---: |
@@ -282,8 +283,8 @@ SHA-256 of the instance id is odd; `tests_use_new_names` was designed while
 looking at the even half only.
 
 ```
-$ issuelint check data/full/test.parquet --quiet --json full.json
-$ issuelint agree full.json data/annotations/results/ensembled_annotations_public.csv \
+$ issuelint check $DATA/full/test.parquet --quiet --json full.json
+$ issuelint agree full.json $DATA/annotations/results/ensembled_annotations_public.csv \
     --label underspecified --positive-at 2
 ```
 
