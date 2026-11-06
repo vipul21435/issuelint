@@ -71,3 +71,28 @@ def test_swebench_analysis_on_a_small_directory(tmp_path: Path, monkeypatch):
     assert "| `solution_leakage` | 6 (50.0 %) | 2 (50.0 %) |" in text
     assert "Label `underspecified >= 2`: 12 annotated tasks, 6 positive" in text
     assert "| `underspecification` | 1.000" in text
+
+
+def test_agreement_table_with_a_one_class_held_out_half():
+    from issuelint.checks import run_all
+    from issuelint.records import record_from_dict
+
+    script = runpy.run_path(str(EXAMPLES / "swebench_analysis.py"), run_name="analysis")
+    held_out, agreement_table = script["held_out"], script["agreement_table"]
+    rows = _rows(40)
+    reports = run_all([record_from_dict(r) for r in rows])
+    ids = [r["instance_id"] for r in rows]
+    # Every held-out task negative, the others alternating: the held-out half has one class.
+    labels = {}
+    for k, task_id in enumerate(ids):
+        labels[task_id] = 0.0 if held_out(task_id) else float(3 * (k % 2))
+    assert any(held_out(i) for i in ids)
+    assert not all(held_out(i) for i in ids)
+    lines = agreement_table(reports, labels, "underspecified", ["underspecification"])
+    assert "held-out half: 0 tasks." in lines[0]
+    row = next(line for line in lines if line.startswith("| `underspecification`"))
+    assert row.split(" | ")[2] == "n/a"
+    flat = dict.fromkeys(ids, 0.0)
+    assert agreement_table(reports, flat, "underspecified", ["underspecification"]) == [
+        "Label `underspecified >= 2`: no score varies on the annotated tasks."
+    ]
