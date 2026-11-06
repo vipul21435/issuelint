@@ -72,7 +72,8 @@ leaky-tests
        scope_gap            0.00  0 of 1 changed identifiers never mentioned in the issue
 ```
 
-`--json FILE` and `--csv FILE` write the same findings as data (the JSON
+`--flagged-only` limits `--explain` to flagged tasks. `--json FILE` and
+`--csv FILE` write the same findings as data (the JSON
 also carries the counts behind every score); `--markdown FILE` writes the
 per-check shares with example ids; `--examples N` adds up to N example ids
 per check to the printed summary; `--with-hints` reads the hints together

@@ -255,3 +255,10 @@ def test_traceback_source_lines_are_dropped():
     assert "helper()" not in kept
     assert "ZeroDivisionError" in kept
     assert "x = compute(1)" in kept
+
+
+def test_explain_flagged_only(capsys):
+    assert main(["check", str(SAMPLE), "--quiet", "--explain", "--flagged-only"]) == 0
+    out = capsys.readouterr().out
+    assert "leaky-solution" in out
+    assert "\nclean-1\n" not in out

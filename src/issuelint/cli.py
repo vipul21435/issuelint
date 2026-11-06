@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="read the hints (hints_text) together with the issue text",
     )
     check.add_argument("--explain", action="store_true", help="print evidence for every task")
+    check.add_argument(
+        "--flagged-only",
+        action="store_true",
+        help="with --explain, print only tasks flagged by a check other than location_hints",
+    )
     check.add_argument("--json", type=Path, metavar="FILE", help="write findings as JSON")
     check.add_argument("--csv", type=Path, metavar="FILE", help="write scores and flags as CSV")
     check.add_argument(
@@ -140,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
         print()
     if args.explain:
         for r in reports:
+            if args.flagged_only and not [f for f in r.flags if f != "location_hints"]:
+                continue
             print(explain(r))
             print()
     print(summary(reports, examples=args.examples))
