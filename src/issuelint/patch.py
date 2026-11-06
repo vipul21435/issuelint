@@ -1,0 +1,123 @@
+"""Unified diff parsing: files touched, added lines, and the identifiers a patch changes."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+
+_FILE_RE = re.compile(r"^diff --git a/(?P<a>\S+) b/(?P<b>\S+)$")
+_PLUS_FILE_RE = re.compile(r"^\+\+\+ (?:b/)?(?P<path>\S+)")
+_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@(?P<context>.*)$")
+
+# Definitions in the languages that dominate public issue-to-fix datasets.
+_DEF_RES = (
+    re.compile(r"^\s*(?:async\s+)?def\s+(?P<name>[A-Za-z_]\w*)"),
+    re.compile(r"^\s*class\s+(?P<name>[A-Za-z_]\w*)"),
+    re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s*\*?\s*(?P<name>[A-Za-z_$][\w$]*)"),
+    re.compile(r"^\s*(?:export\s+)?(?:const|let|var)\s+(?P<name>[A-Za-z_$][\w$]*)\s*="),
+    re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+(?P<name>[A-Za-z_]\w*)"),
+    re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|trait|impl)\s+(?P<name>[A-Za-z_]\w*)"),
+    re.compile(r"^func\s+(?:\([^)]*\)\s*)?(?P<name>[A-Za-z_]\w*)"),
+)
+_CONTEXT_NAME_RE = re.compile(
+    r"\b(?:def|class|function|fn|func|struct|impl|trait)\s+([A-Za-z_$][\w$]*)"
+)
+_TEST_PATH_RE = re.compile(
+    r"(?:^|/)(?:tests?|__tests__|spec|specs|testing)(?:/|$)|(?:^|/)(?:test_[^/]*|[^/]*_test\.[^/]+|[^/]*\.(?:test|spec)\.[^/]+)$"
+)
+
+
+@dataclass
+class FileDiff:
+    """The parts of one file's diff that the checks use."""
+
+    path: str
+    added: list[str] = field(default_factory=list)
+    removed: list[str] = field(default_factory=list)
+    hunk_contexts: list[str] = field(default_factory=list)
+
+    @property
+    def is_test(self) -> bool:
+        return bool(_TEST_PATH_RE.search(self.path))
+
+
+@dataclass
+class ParsedPatch:
+    """A parsed unified diff."""
+
+    files: list[FileDiff] = field(default_factory=list)
+
+    @property
+    def paths(self) -> list[str]:
+        return [f.path for f in self.files]
+
+    def added_lines(self, *, include_tests: bool = True) -> list[str]:
+        return [line for f in self.files if include_tests or not f.is_test for line in f.added]
+
+    def removed_lines(self, *, include_tests: bool = True) -> list[str]:
+        return [line for f in self.files if include_tests or not f.is_test for line in f.removed]
+
+    def changed_identifiers(self, *, include_tests: bool = False) -> list[str]:
+        """Names of functions, classes and similar that the patch defines or sits inside.
+
+        Collected from hunk context headers (the enclosing definition) and from
+        added or removed definition lines. Order of first appearance, no repeats.
+        """
+        seen: dict[str, None] = {}
+        for f in self.files:
+            if f.is_test and not include_tests:
+                continue
+            for context in f.hunk_contexts:
+                for match in _CONTEXT_NAME_RE.finditer(context):
+                    seen.setdefault(match.group(1), None)
+            for line in (*f.added, *f.removed):
+                for pattern in _DEF_RES:
+                    match = pattern.match(line)
+                    if match:
+                        seen.setdefault(match.group("name"), None)
+                        break
+        return list(seen)
+
+
+def parse_patch(text: str) -> ParsedPatch:
+    """Parse a unified diff. Lines outside hunks are ignored except file headers."""
+    parsed = ParsedPatch()
+    current: FileDiff | None = None
+    in_hunk = False
+    for raw in text.splitlines():
+        header = _FILE_RE.match(raw)
+        if header:
+            current = FileDiff(path=header.group("b"))
+            parsed.files.append(current)
+            in_hunk = False
+            continue
+        plus = _PLUS_FILE_RE.match(raw)
+        if plus and not in_hunk:
+            path = plus.group("path")
+            if current is None or (current.added or current.removed or current.hunk_contexts):
+                current = FileDiff(path=path)
+                parsed.files.append(current)
+            elif path != "/dev/null":
+                current.path = path
+            continue
+        if raw.startswith("--- ") and not in_hunk:
+            continue
+        hunk = _HUNK_RE.match(raw)
+        if hunk:
+            if current is None:
+                current = FileDiff(path="<unknown>")
+                parsed.files.append(current)
+            in_hunk = True
+            context = hunk.group("context").strip()
+            if context:
+                current.hunk_contexts.append(context)
+            continue
+        if current is None or not in_hunk:
+            continue
+        if raw.startswith("+"):
+            current.added.append(raw[1:])
+        elif raw.startswith("-"):
+            current.removed.append(raw[1:])
+        elif raw.startswith("\\"):
+            continue
+    return parsed
