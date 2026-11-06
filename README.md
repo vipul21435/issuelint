@@ -156,6 +156,9 @@ Details that matter on real issues:
   repeats in `S` counted.
 - *Test leakage* matches whole assertion lines, so all n-grams of an
   assertion must occur in the issue, not only the identifier-heavy ones.
+  An assertion line shorter than one n-gram (`assert result`, or the opening
+  `self.assertEqual(` of a call split over lines) is left out of the total:
+  it has no n-gram to match, and counting it would lower the score.
 - *Scope gap* also reports, without changing its score,
   `tests_use_new_names`: identifiers (three characters or more) on the gold
   patch's added code lines and on none of its removed lines, used on the
@@ -216,8 +219,8 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
 300 task(s)
   solution_leakage     flagged   16 (  5.3%)  nonzero   24 (  8.0%)  mean score 0.035
                        e.g. django__django-14534, django__django-16255, pytest-dev__pytest-5227
-  test_leakage         flagged    4 (  1.3%)  nonzero    7 (  2.3%)  mean score 0.011
-                       e.g. sympy__sympy-22005, django__django-13757, django__django-15695
+  test_leakage         flagged    6 (  2.0%)  nonzero    7 (  2.3%)  mean score 0.015
+                       e.g. django__django-13757, sympy__sympy-22005, pytest-dev__pytest-7373
   location_hints       flagged    0 (  0.0%)  nonzero  126 ( 42.0%)  mean score 0.264
                        e.g. django__django-11583, django__django-12453, django__django-13321
   underspecification   flagged  154 ( 51.3%)  nonzero  244 ( 81.3%)  mean score 0.378
@@ -227,13 +230,13 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
                        e.g. astropy__astropy-12907, astropy__astropy-14365, astropy__astropy-14995
 ```
 
-**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py data --out docs/results.md --chart docs/signal_shares.png`, 102 s on a laptop; the output is the same on every run):
+**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py data --out docs/results.md --chart docs/signal_shares.png`, 57 s on a laptop; the output is the same on every run):
 
 | check, tasks flagged | Lite (300) | Verified (500) | SWE-bench test (2294) | SWE-Bench+ (548) |
 | --- | ---: | ---: | ---: | ---: |
 | `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
 | `solution_leakage`, `--with-hints` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
-| `test_leakage` | 4 (1.3 %) | 7 (1.4 %) | 24 (1.0 %) | 3 (0.5 %) |
+| `test_leakage` | 6 (2.0 %) | 9 (1.8 %) | 27 (1.2 %) | 5 (0.9 %) |
 | `location_hints`, score > 0 | 42.0 % | 51.0 % | 52.4 % | 46.2 % |
 | `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
 | `external_links` | 0 (0.0 %) | 51 (10.2 %) | 313 (13.6 %) | 75 (13.7 %) |
