@@ -432,3 +432,36 @@ def test_agree_rejects_malformed_findings(
     labels.write_text("instance_id,l\na,1\n", encoding="utf-8")
     assert main(["agree", str(findings), str(labels), "--label", "l"]) == 2
     assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--solution-leakage", "nan"],
+        ["--test-leakage", "-1"],
+        ["--underspecification", "1.5"],
+        ["--scope-gap", "inf"],
+        ["--solution-leakage", "x"],
+    ],
+)
+def test_out_of_range_shares_exit_2(capsys: pytest.CaptureFixture[str], flags: list[str]):
+    with pytest.raises(SystemExit) as exc:
+        main(["check", str(SAMPLE), "--quiet", *flags])
+    assert exc.value.code == 2
+    assert flags[0] in capsys.readouterr().err
+
+
+def test_share_bounds_are_accepted(capsys: pytest.CaptureFixture[str]):
+    assert main(
+        ["check", str(SAMPLE), "--quiet", "--solution-leakage", "1", "--test-leakage", "0"]
+    ) in (0, 1)
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "x"])
+def test_agree_positive_at_must_be_finite(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], value: str
+):
+    with pytest.raises(SystemExit) as exc:
+        main(["agree", "f.json", "l.csv", "--label", "l", "--positive-at", value])
+    assert exc.value.code == 2
+    assert "--positive-at" in capsys.readouterr().err

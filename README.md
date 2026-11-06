@@ -89,7 +89,9 @@ out-of-range option exits 2 with a one-line error, so CI can tell the two
 apart. Every
 cut-off is a flag (`--ngram`, `--solution-leakage`, `--test-leakage`,
 `--underspecification`, `--scope-gap`, `--min-issue-tokens`,
-`--max-evidence`); `issuelint check --help` lists the defaults.
+`--max-evidence`); the four share thresholds take a number from 0 to 1
+(NaN, infinities and values outside exit 2); `issuelint check --help` lists
+the defaults.
 
 `issuelint agree FINDINGS.json LABELS.csv --label COLUMN --positive-at X`
 compares every score and count in a `check --json` file with a numeric

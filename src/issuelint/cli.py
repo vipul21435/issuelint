@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
 from collections.abc import Callable
@@ -28,6 +29,25 @@ def _count(minimum: int) -> Callable[[str], int]:
         return value
 
     return parse
+
+
+def _finite(text: str) -> float:
+    """An argparse type for finite numbers; NaN and infinities exit 2."""
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected a number, got {text!r}") from None
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError(f"must be a finite number, got {text!r}")
+    return value
+
+
+def _share(text: str) -> float:
+    """An argparse type for a share threshold: a finite number from 0 to 1."""
+    value = _finite(text)
+    if not 0.0 <= value <= 1.0:
+        raise argparse.ArgumentTypeError(f"must be between 0 and 1, got {text!r}")
+    return value
 
 
 def _unwritable(path: Path) -> str | None:
@@ -89,25 +109,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument(
         "--solution-leakage",
-        type=float,
+        type=_share,
         default=d.solution_leakage,
         help=f"flag at this share of added-code n-grams found in the issue ({d.solution_leakage})",
     )
     check.add_argument(
         "--test-leakage",
-        type=float,
+        type=_share,
         default=d.test_leakage,
         help=f"flag at this share of added tests and assertions in the issue ({d.test_leakage})",
     )
     check.add_argument(
         "--underspecification",
-        type=float,
+        type=_share,
         default=d.underspecification,
         help=f"flag at this share of missing specification signals ({d.underspecification})",
     )
     check.add_argument(
         "--scope-gap",
-        type=float,
+        type=_share,
         default=d.scope_gap,
         help=f"flag at this share of changed identifiers the issue never names ({d.scope_gap})",
     )
@@ -131,7 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
     agree.add_argument("--label", required=True, help="numeric label column")
     agree.add_argument(
         "--positive-at",
-        type=float,
+        type=_finite,
         default=1.0,
         help="a task is positive when its label is at least this (1)",
     )
