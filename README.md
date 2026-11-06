@@ -202,9 +202,11 @@ Details that matter on real issues:
   `self.assertEqual(` of a call split over lines) is left out of the total:
   it has no n-gram to match, and counting it would lower the score.
 - *Scope gap* also reports, without changing its score,
-  `tests_use_new_names`: identifiers (three characters or more) on the gold
-  patch's added code lines and on none of its removed lines, used on the
-  test patch's added lines, and absent from the issue. This is the test
+  `tests_use_new_names`: identifiers (three characters or more, language
+  keywords and builtins such as `def`, `self`, `None`, `func` and `err`
+  left out) on the gold patch's added code lines and on none of its removed
+  lines, used on the test patch's added lines and on none of its removed
+  lines, and absent from the issue. This is the test
   problem the Verified instructions describe.
 - *Location hints* are reported and never flagged: naming the file or the
   function is normal in a good bug report, but it is worth knowing how much

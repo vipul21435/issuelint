@@ -203,6 +203,59 @@ def test_scope_gap_reports_new_names_the_tests_rely_on():
     assert f.metrics["unmentioned"] == 2
 
 
+def test_tests_use_new_names_skips_keywords_and_builtins():
+    patch = (
+        "--- a/pkg/core.py\n+++ b/pkg/core.py\n@@ -1,1 +1,6 @@\n"
+        " import os\n"
+        "+from pkg.io import read_block\n"
+        "+class Reader:\n"
+        "+    def parse_header(self, raw):\n"
+        "+        if raw is None or not isinstance(raw, bytes):\n"
+        "+            return read_block(raw)\n"
+    )
+    test_patch = (
+        "--- a/tests/test_core.py\n+++ b/tests/test_core.py\n@@ -1 +1,6 @@\n"
+        "+from pkg.core import Reader\n"
+        "+class TestReader:\n"
+        "+    def test_header(self):\n"
+        "+        if True:\n"
+        "+            return None\n"
+        "+        assert Reader().parse_header(bytes()) is not None\n"
+    )
+    issue = "Reading a file with pkg fails."
+    record = TaskRecord(id="t", issue=issue, patch=patch, test_patch=test_patch)
+    f = run_checks(record).finding("scope_gap")
+    used = [e.split()[2].rstrip(",") for e in f.evidence if e.startswith("tests use ")]
+    assert used == ["Reader", "parse_header"]
+    assert f.metrics["tests_use_new_names"] == 2
+
+
+def test_tests_use_new_names_skips_go_keywords():
+    patch = (
+        "--- a/conv/conv.go\n+++ b/conv/conv.go\n@@ -1,1 +1,7 @@\n"
+        " package conv\n"
+        "+func ParseUnit(s string) (Unit, error) {\n"
+        "+\tvar err error\n"
+        '+\tif s == "" {\n'
+        "+\t\treturn nil, err\n"
+        "+\t}\n"
+        "+}\n"
+    )
+    test_patch = (
+        "--- a/conv/conv_test.go\n+++ b/conv/conv_test.go\n@@ -1,1 +1,6 @@\n"
+        " package conv\n"
+        "+func TestParseUnit(t *testing.T) {\n"
+        '+\tif _, err := ParseUnit(""); err != nil {\n'
+        "+\t\treturn\n"
+        "+\t}\n"
+        "+}\n"
+    )
+    record = TaskRecord(id="t", issue="Empty unit text.", patch=patch, test_patch=test_patch)
+    f = run_checks(record).finding("scope_gap")
+    used = [e.split()[2].rstrip(",") for e in f.evidence if e.startswith("tests use ")]
+    assert used == ["ParseUnit"]
+
+
 def test_moved_code_quoted_in_a_traceback_is_not_leakage():
     from issuelint.records import TaskRecord
 

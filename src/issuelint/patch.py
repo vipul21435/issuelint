@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import keyword
 import re
 from dataclasses import dataclass, field
 
@@ -26,6 +28,39 @@ _CONTEXT_NAME_RE = re.compile(
     r"\b(?:def|class|function|fn|func|struct|impl|trait)\s+([A-Za-z_$][\w$]*)"
 )
 _NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# Words a fix uses without introducing them: keywords and builtins of the
+# languages above. Python's set is read from the interpreter, plus the names
+# later versions add, so that the result is the same on every supported version.
+_PYTHON_COMMON = (
+    set(keyword.kwlist)
+    | {"match", "case", "type", "self", "cls"}
+    | {name for name in dir(builtins) if not name.startswith("_")}
+    | {"ExceptionGroup", "BaseExceptionGroup", "PythonFinalizationError"}
+)
+
+
+def _word_set(text: str) -> set[str]:
+    return set(text.split())
+
+
+_OTHER_COMMON = _word_set(
+    # JavaScript and TypeScript
+    "function return const let var new this null undefined true false typeof instanceof"
+    " async await export import from default class extends super throw catch try finally"
+    " for while else switch case break continue delete void yield static interface enum"
+    " implements private public protected readonly string number boolean any unknown never"
+    " console Object Array Promise Error JSON Math String Number Boolean Symbol Map Set"
+    # Go
+    " func err nil package struct chan defer select range fallthrough goto int int8 int16"
+    " int32 int64 uint uint8 uint16 uint32 uint64 uintptr byte rune bool error float32"
+    " float64 complex64 complex128 len cap make append copy panic recover iota"
+    # Rust
+    " mut impl pub use mod crate Self trait loop where unsafe move ref dyn Some None"
+    " Err Option Result Vec Box usize isize f32 f64 str println assert assert_eq"
+    " assert_ne"
+)
+COMMON_NAMES: frozenset[str] = frozenset(_PYTHON_COMMON | _OTHER_COMMON)
+
 _TEST_PATH_RE = re.compile(
     r"(?:^|/)(?:tests?|__tests__|spec|specs|testing)(?:/|$)|(?:^|/)(?:test_[^/]*|[^/]*_test\.[^/]+|[^/]*\.(?:test|spec)\.[^/]+)$"
 )
@@ -87,13 +122,15 @@ class ParsedPatch:
 
         This over-approximates what the fix introduces: a name already present
         elsewhere in the file but not in the hunk counts as new. Order of first
-        appearance; names shorter than ``min_length`` (``i``, ``x``) are skipped.
+        appearance; names shorter than ``min_length`` (``i``, ``x``) and the
+        keywords and builtins in ``COMMON_NAMES`` (``def``, ``self``, ``None``,
+        ``func``, ``err``) are skipped.
         """
         removed = set(_NAME_RE.findall("\n".join(self.removed_lines(include_tests=False))))
         found: dict[str, None] = {}
         for line in code_lines(self.added_lines(include_tests=False)):
             for name in _NAME_RE.findall(line):
-                if len(name) >= min_length and name not in removed:
+                if len(name) >= min_length and name not in removed and name not in COMMON_NAMES:
                     found.setdefault(name, None)
         return list(found)
 
