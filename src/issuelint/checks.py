@@ -105,7 +105,9 @@ class TaskReport:
 
 _TEST_NAME_RES = (
     re.compile(r"^\s*(?:async\s+)?def\s+(test\w*)"),
-    re.compile(r"^\s*(?:it|test|describe)\s*\(\s*['\"`]([^'\"`]+)['\"`]"),
+    # it() and test() name a test; describe() names a suite, usually after the
+    # function under test, so it is not read.
+    re.compile(r"^\s*(?:it|test)\s*\(\s*['\"`]([^'\"`]+)['\"`]"),
     re.compile(r"^\s*#\[test\]\s*$"),
     re.compile(r"^\s*(?:pub\s+)?fn\s+(test\w*)"),
     re.compile(r"^func\s+(Test\w*)"),
@@ -221,6 +223,24 @@ def test_names_from_ids(ids: tuple[str, ...] | list[str]) -> list[str]:
     return list(names)
 
 
+_IDENT_RE = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def _names_test(issue: str, issue_words: set[str], name: str) -> bool:
+    """Whether the issue names a test.
+
+    A test function name (``test_parse``) must appear as a whole word. A title
+    from ``it("...")`` or ``test("...")`` of two or more words must appear as the
+    whole phrase; a one-word title (``it("works")``) only in quotes or
+    backticks, since the bare word is ordinary prose.
+    """
+    if " " in name.strip():
+        return name in issue
+    if _IDENT_RE.match(name) and name[:4].lower() == "test":
+        return mentions(issue_words, name)
+    return any(f"{q}{name}{q}" in issue for q in ("'", '"', "`"))
+
+
 def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Thresholds) -> Finding:
     # FAIL_TO_PASS names the tests that decide the task; when it gives names,
     # test definitions found in the test patch are not read.
@@ -236,9 +256,7 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
     evidence: list[str] = []
     hit = 0
     for name in names:
-        # Identifier names must appear as a whole word; titles such as it("renders
-        # the header") contain spaces and are matched as a phrase.
-        if mentions(issue_words, name) or (" " in name and name in record.issue):
+        if _names_test(record.issue, issue_words, name):
             hit += 1
             evidence.append(f"issue names the added test: {name}")
     for line in asserts:

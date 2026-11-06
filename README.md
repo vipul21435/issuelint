@@ -371,7 +371,10 @@ of leaking instances, so the overlap could not be measured.
   identifier half of `location_hints` see only hunk context headers.
 - `test_leakage` reads test names from `def test_*`, `it("...")`,
   `test("...")`, `fn test_*` and `func Test*`; parametrised or generated
-  tests are missed unless the record carries `FAIL_TO_PASS`. SWE-Bench+
+  tests are missed unless the record carries `FAIL_TO_PASS`. `describe("...")`
+  names a suite, usually after the function under test, and is not read. A
+  title of two or more words must appear in the issue as the whole phrase; a
+  one-word title such as `it("works")` counts only when the issue quotes it. SWE-Bench+
   records have no `FAIL_TO_PASS`, so their test names come from the test
   patch only.
 - Nothing is executed: no repository checkout, no test run, no check that

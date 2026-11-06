@@ -389,3 +389,38 @@ def test_tilde_and_unclosed_fences_are_code(fix: str):
     )
     f = run_checks(TaskRecord(id="t", issue=fix, patch=patch)).finding("solution_leakage")
     assert f.score == 1.0
+
+
+DATE_PATCH = (
+    "--- a/src/date.js\n+++ b/src/date.js\n@@ -1,2 +1,2 @@ function parseDate(s) {\n"
+    "-  return s;\n+  return new Date(s);\n"
+)
+
+
+def _js_test_patch(body: str) -> str:
+    return "--- a/test/date.test.js\n+++ b/test/date.test.js\n@@ -0,0 +1,3 @@\n" + body
+
+
+def test_describe_blocks_are_not_test_names():
+    test_patch = _js_test_patch(
+        "+describe('parseDate', () => {\n+  it('handles ISO', () => {});\n+});\n"
+    )
+    issue = "parseDate returns a string for ISO input instead of a Date."
+    f = run_checks(TaskRecord(id="t", issue=issue, patch=DATE_PATCH, test_patch=test_patch))
+    leak = f.finding("test_leakage")
+    assert leak.metrics["test_names"] == 1
+    assert leak.score == 0.0
+
+
+@pytest.mark.parametrize(
+    ("issue", "score"),
+    [
+        ("Nothing works after upgrading to 2.0.", 0.0),
+        ("The test 'works' fails after upgrading to 2.0.", 1.0),
+        ("The `works` test fails after upgrading.", 1.0),
+    ],
+)
+def test_one_word_titles_count_only_when_quoted(issue: str, score: float):
+    test_patch = _js_test_patch("+it('works', () => {\n+  run();\n+});\n")
+    f = run_checks(TaskRecord(id="t", issue=issue, patch=DATE_PATCH, test_patch=test_patch))
+    assert f.finding("test_leakage").score == score
