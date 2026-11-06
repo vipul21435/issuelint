@@ -186,6 +186,34 @@ def test_load_jsonl_and_json(tmp_path: Path):
         load_records(tmp_path / "r.txt")
 
 
+def test_row_errors_name_their_line_or_record(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    good = {"id": "a", "issue": "i", "patch": "p"}
+    bad_ids = {"id": "y", "issue": "a", "patch": "", "FAIL_TO_PASS": "test_a"}
+    jl = tmp_path / "r.jsonl"
+    jl.write_text("\n".join(json.dumps(r) for r in [good, {"id": "b", "patch": "q"}, bad_ids]))
+    with pytest.raises(RecordError, match=r"^line 2: row needs an issue"):
+        load_records(jl)
+    jl.write_text("\n".join(json.dumps(r) for r in [good, good | {"id": "b"}, bad_ids]))
+    with pytest.raises(RecordError, match=r"^line 3: FAIL_TO_PASS is not a JSON list"):
+        load_records(jl)
+    assert main(["check", str(jl)]) == 2
+    assert "line 3: FAIL_TO_PASS" in capsys.readouterr().err
+    js = tmp_path / "r.json"
+    js.write_text(json.dumps([good, {"id": "b"}]))
+    with pytest.raises(RecordError, match=r"^record 2: row needs an issue"):
+        load_records(js)
+
+
+def test_parquet_row_errors_name_their_row(tmp_path: Path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    rows = [{"id": "a", "issue": "i", "patch": "p"}, {"id": "b", "issue": None, "patch": "q"}]
+    path = tmp_path / "r.parquet"
+    pq.write_table(pa.Table.from_pylist(rows), path)
+    with pytest.raises(RecordError, match=r"^row 2: row needs an issue"):
+        load_records(path)
+
+
 SAMPLE = Path(__file__).resolve().parents[1] / "examples" / "sample.jsonl"
 
 

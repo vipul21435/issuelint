@@ -106,7 +106,11 @@ def iter_jsonl(lines: Iterable[str]) -> Iterator[TaskRecord]:
             raise RecordError(f"line {number}: not JSON ({exc.msg})") from exc
         if not isinstance(row, dict):
             raise RecordError(f"line {number}: expected an object, got {type(row).__name__}")
-        yield record_from_dict(row, default_id=f"row-{number}")
+        try:
+            record = record_from_dict(row, default_id=f"row-{number}")
+        except RecordError as exc:
+            raise RecordError(f"line {number}: {exc}") from exc
+        yield record
 
 
 def load_jsonl(path: str | Path) -> list[TaskRecord]:
@@ -126,7 +130,10 @@ def load_json(path: str | Path) -> list[TaskRecord]:
     for i, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             raise RecordError(f"record {i}: expected an object, got {type(row).__name__}")
-        records.append(record_from_dict(row, default_id=f"row-{i}"))
+        try:
+            records.append(record_from_dict(row, default_id=f"row-{i}"))
+        except RecordError as exc:
+            raise RecordError(f"record {i}: {exc}") from exc
     return records
 
 
@@ -145,7 +152,13 @@ def load_parquet(path: str | Path) -> list[TaskRecord]:
     except Exception as exc:  # pyarrow raises its own error types for bad files
         first = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
         raise RecordError(f"{path}: not a readable Parquet file ({first})") from exc
-    return [record_from_dict(row, default_id=f"row-{i}") for i, row in enumerate(rows, start=1)]
+    records = []
+    for i, row in enumerate(rows, start=1):
+        try:
+            records.append(record_from_dict(row, default_id=f"row-{i}"))
+        except RecordError as exc:
+            raise RecordError(f"row {i}: {exc}") from exc
+    return records
 
 
 def load_records(path: str | Path, limit: int | None = None) -> list[TaskRecord]:
