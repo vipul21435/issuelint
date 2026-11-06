@@ -1,7 +1,17 @@
 # issuelint
 
+[![ci](https://github.com/vipul21435/issuelint/actions/workflows/ci.yml/badge.svg)](https://github.com/vipul21435/issuelint/actions/workflows/ci.yml)
+
 Check issue-to-fix task records for solution leaks, test leaks, location hints,
 underspecification, external links and scope gaps before they become benchmark items.
+
+issuelint lines an issue up against its gold patch and test patch and
+reports, with evidence, where the issue already gives away the fix or the
+tests, or leaves the task underspecified. On the 300 SWE-bench Lite tasks it
+flags 17 for solution leakage (15 read by hand as the issue proposing the
+fix code) and 3 for test leakage (all 3 read as the issue naming or pasting
+the deciding test), and no task for external links, which Lite filters out
+(command and data under "Results on real public data").
 
 ## Why this is hard
 
@@ -28,11 +38,20 @@ the Parquet files that SWE-bench splits are published in needs `pyarrow`:
 pip install "issuelint[parquet] @ git+https://github.com/vipul21435/issuelint"
 ```
 
-The tests run offline in about a second. On 2026-11-06,
-`uv run --extra dev pytest --cov=issuelint` gave 73 passed and 99 % line and
-branch coverage (lowest modules: `cli.py` and `report.py`, 98 %).
+Development: in a clone, `uv run --extra dev pytest --cov=issuelint` runs
+the tests offline in about a second; on 2026-11-06 it gave 113 passed and
+99 % line and branch coverage (lowest modules: `cli.py`, `report.py` and
+`text.py`, 98 %).
 
 ## Quickstart
+
+The commands below read `examples/sample.jsonl`, which the installed
+package does not ship, so clone the repository first:
+
+```
+git clone https://github.com/vipul21435/issuelint && cd issuelint
+pip install -e .
+```
 
 Input is a `.jsonl` (one object per line), `.json` or `.parquet` file. Each
 record has an issue, a gold patch and, optionally, a test patch and hints;
@@ -148,18 +167,8 @@ SWE-bench Lite filters ([swebench.com/lite](https://www.swebench.com/lite.html))
 drop issues with external hyperlinks or fewer than 40 words, which is where
 `external_links` and the number in the default `--min-issue-tokens 40` come
 from. The check counts code tokens (punctuation, numbers and operators each
-count), not words, so it is looser than the Lite rule: on the SWE-bench
-test split 50 of 2294 issues have fewer than 40 tokens and 168 fewer than
-40 whitespace-separated words (no Lite issue is below either), counted
-with:
-
-```python
-from issuelint.records import load_records
-from issuelint.text import tokens
-
-rs = load_records("../issuelint-data/full/test.parquet")  # DATA, see "Results" below
-print(sum(len(tokens(r.issue)) < 40 for r in rs), sum(len(r.issue.split()) < 40 for r in rs))
-```
+count), not words, so it is looser than the Lite rule (see "Short issues"
+under the results).
 
 | check | score | default threshold |
 | --- | --- | --- |
@@ -251,29 +260,29 @@ unzip $DATA/annotations/results.zip -d $DATA/annotations/results
 ```
 $ issuelint check $DATA/lite/test.parquet --quiet --examples 3
 300 task(s)
-  solution_leakage     flagged   16 (  5.3%)  nonzero   24 (  8.0%)  mean score 0.035
+  solution_leakage     flagged   17 (  5.7%)  nonzero   24 (  8.0%)  mean score 0.036
                        e.g. django__django-14534, django__django-16255, pytest-dev__pytest-5227
-  test_leakage         flagged    6 (  2.0%)  nonzero    7 (  2.3%)  mean score 0.015
-                       e.g. django__django-13757, sympy__sympy-22005, pytest-dev__pytest-7373
-  location_hints       flagged    0 (  0.0%)  nonzero  126 ( 42.0%)  mean score 0.264
+  test_leakage         flagged    3 (  1.0%)  nonzero    4 (  1.3%)  mean score 0.009
+                       e.g. django__django-13757, sympy__sympy-22005, django__django-15695
+  location_hints       flagged    0 (  0.0%)  nonzero  125 ( 41.7%)  mean score 0.262
                        e.g. django__django-11583, django__django-12453, django__django-13321
-  underspecification   flagged  154 ( 51.3%)  nonzero  244 ( 81.3%)  mean score 0.378
+  underspecification   flagged  153 ( 51.0%)  nonzero  244 ( 81.3%)  mean score 0.377
                        e.g. django__django-10914, django__django-11039, django__django-11099
   external_links       flagged    0 (  0.0%)  nonzero    0 (  0.0%)  mean score 0.000
   scope_gap            flagged  222 ( 74.0%)  nonzero  225 ( 75.0%)  mean score 0.703
                        e.g. astropy__astropy-12907, astropy__astropy-14365, astropy__astropy-14995
 ```
 
-**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py $DATA --out docs/results.md --chart docs/signal_shares.png`, 57 s on a laptop; the output is the same on every run):
+**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py $DATA --out docs/results.md --chart docs/signal_shares.png`, 85 s on a laptop; the output is the same on every run):
 
 | check, tasks flagged | Lite (300) | Verified (500) | SWE-bench test (2294) | SWE-Bench+ (548) |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
-| `solution_leakage`, `--with-hints` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
-| `test_leakage` | 6 (2.0 %) | 9 (1.8 %) | 27 (1.2 %) | 5 (0.9 %) |
-| `location_hints`, score > 0 | 42.0 % | 51.0 % | 52.4 % | 46.2 % |
-| `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
-| `external_links` | 0 (0.0 %) | 51 (10.2 %) | 313 (13.6 %) | 75 (13.7 %) |
+| `solution_leakage` | 17 (5.7 %) | 19 (3.8 %) | 52 (2.3 %) | 12 (2.2 %) |
+| `solution_leakage`, `--with-hints` | 32 (10.7 %) | 41 (8.2 %) | 126 (5.5 %) | 28 (5.1 %) |
+| `test_leakage` | 3 (1.0 %) | 8 (1.6 %) | 22 (1.0 %) | 2 (0.4 %) |
+| `location_hints`, score > 0 | 41.7 % | 50.6 % | 52.1 % | 45.6 % |
+| `underspecification` | 153 (51.0 %) | 250 (50.0 %) | 1283 (55.9 %) | 218 (39.8 %) |
+| `external_links` | 0 (0.0 %) | 52 (10.4 %) | 314 (13.7 %) | 75 (13.7 %) |
 | `scope_gap` | 222 (74.0 %) | 361 (72.2 %) | 1811 (78.9 %) | 362 (66.1 %) |
 
 ![Share of tasks flagged per check on four public sets](docs/signal_shares.png)
@@ -283,14 +292,26 @@ What the numbers say, and what they do not:
 - `external_links` flags no Lite task, as it should: Lite was built by
   removing issues with external hyperlinks. With `--with-hints` it flags 15
   Lite tasks, because the comments carry links the issue does not.
-- Reading the evidence of the 16 Lite tasks flagged for solution leakage,
-  14 show the issue proposing the fix code (for example a suggested line or
-  a diff in the issue). Two are not leaks: in `astropy__astropy-14182` the
+- Reading the evidence of the 17 Lite tasks flagged for solution leakage,
+  15 show the issue proposing the fix code (for example a suggested line or
+  a diff in the issue; `django__django-12453` gives its diff without a code
+  fence, which is why unfenced diffs are read as code). Two are not leaks: in `astropy__astropy-14182` the
   patch copies the issue's reproduction into a docstring example, and in
   `sympy__sympy-15678` the patch raises an error message that the issue
   quotes. This is one reader's judgement on 16 tasks, not a measured
   precision. The moved-line and traceback rules above were added after
   reading the first version's Lite flags, so Lite is not held out for them.
+- Reading the evidence of the 3 Lite tasks flagged for test leakage, all 3
+  give away the test that decides the task: `django__django-13757` tells the
+  reader to edit the `FAIL_TO_PASS` test `test_isnull_key` and how,
+  `sympy__sympy-22005` pastes a diff of `test_solve_poly_system`, and
+  `django__django-15695` pastes the changed test lines, including the added
+  assertion. An earlier version also flagged `pytest-dev__pytest-7220`,
+  `7373` and `7432`, where the issue's reproduction is copied into a
+  `pytester` string inside the new test; those are not test leaks, and the
+  `FAIL_TO_PASS` and indentation rules above were added after a review read
+  them, so Lite is not held out for these rules either. Same caveat: one
+  reading of 3 tasks.
 - `scope_gap` flags most tasks under its default threshold of 0.5: fixes
   usually touch a helper the issue does not name. Read it as a ranking, not
   as a defect rate.
@@ -310,8 +331,8 @@ $ issuelint agree full.json $DATA/annotations/results/ensembled_annotations_publ
 
 | label | score or count | AUC, all 1699 (95 % interval) | AUC, held-out 866 |
 | --- | --- | ---: | ---: |
-| underspecified >= 2 (650 positive) | `underspecification` | 0.568 (0.541 to 0.596) | 0.577 (0.538 to 0.616) |
-| | `underspecification.has_reproduction` | 0.436 (0.412 to 0.460) | 0.424 (0.391 to 0.456) |
+| underspecified >= 2 (650 positive) | `underspecification` | 0.569 (0.541 to 0.596) | 0.576 (0.538 to 0.615) |
+| | `underspecification.has_reproduction` | 0.435 (0.411 to 0.459) | 0.425 (0.394 to 0.458) |
 | | `underspecification.has_expected_actual` | 0.451 (0.428 to 0.474) | 0.446 (0.411 to 0.480) |
 | | `underspecification.has_error_text` | 0.496 (0.473 to 0.519) | 0.494 (0.461 to 0.527) |
 | | `external_links` | 0.517 (0.493 to 0.544) | 0.504 (0.469 to 0.536) |
@@ -326,10 +347,10 @@ The underspecification score ranks human-judged underspecified issues above
 the rest only a little better than chance (AUC 0.57); among its signals,
 the presence of an error text carries no information about the human label
 (0.50), and a reproduction and expected-against-actual wording are the
-useful parts (0.44 and 0.45, below 0.5 because their presence means a
+useful parts (0.435 and 0.451, below 0.5 because their presence means a
 better-specified issue). Patch size alone ranks underspecified issues
-better than the four keyword signals combined: 0.597 against 0.568 on all
-tasks, and 0.588 against 0.577 on the held-out half, where the intervals
+better than the four keyword signals combined: 0.597 against 0.569 on all
+tasks, and 0.588 against 0.576 on the held-out half, where the intervals
 overlap. Larger fixes go with issues the annotators found harder to pin
 down, so the underspecification score is not the best signal on this data.
 For test problems, the count of new names the
@@ -339,15 +360,28 @@ count is not better than patch size, and part of its signal is likely size.
 These checks are screens that order tasks for a human reader; they do not
 replace the reading.
 
+**Short issues.** `--min-issue-tokens 40` counts code tokens, so it is
+looser than Lite's 40-word filter: on the SWE-bench test split 50 of 2294
+issues have fewer than 40 tokens and 168 fewer than 40 whitespace-separated
+words (no Lite issue is below either), counted with:
+
+```python
+from issuelint.records import load_records
+from issuelint.text import tokens
+
+rs = load_records("../issuelint-data/full/test.parquet")  # DATA, see above
+print(sum(len(tokens(r.issue)) < 40 for r in rs), sum(len(r.issue.split()) < 40 for r in rs))
+```
+
 **Comparison with SWE-Bench+.** SWE-Bench+ read the patches SWE-Agent with
 GPT-4 got accepted and reports solution leakage in 18 of 54 resolved Lite
 tasks (33.33 %) and 37 of 112 resolved Verified tasks (33.04 %), counting,
 by manual reading, any fix clearly outlined in the issue or its comments.
 Those shares are over the tasks one agent solved, a set that need not look
 like the whole split; issuelint's shares are over all tasks and count code overlap
-only: 16 of 300 Lite tasks from the issue alone and 30 of 300 with the
+only: 17 of 300 Lite tasks from the issue alone and 32 of 300 with the
 comments. As a share of the whole split, 18 of 300 is 6.0 % against
-issuelint's 5.3 % (issue only) and 10.0 % (with comments), but the two
+issuelint's 5.7 % (issue only) and 10.7 % (with comments), but the two
 counts are not over the same tasks and SWE-Bench+ does not publish its list
 of leaking instances, so the overlap could not be measured.
 
@@ -377,6 +411,20 @@ of leaking instances, so the overlap could not be measured.
   one-word title such as `it("works")` counts only when the issue quotes it. SWE-Bench+
   records have no `FAIL_TO_PASS`, so their test names come from the test
   patch only.
+- The test-path rule (paths under `tests/`, `test/`, `testing/` and the
+  others under "Parsing") also applies to the gold patch, whose test files
+  are left out of solution leakage, location hints and scope gap. Library
+  code under such a directory, such as `django/test/utils.py` or
+  `sympy/testing/`, is therefore ignored when the gold patch changes it. On
+  the SWE-bench test split no gold patch touches such a path (0 of 2294),
+  because SWE-bench moves those files into the test patch, but plain JSONL
+  input can hit this. There is no flag to change the rule.
+- Test definitions nested in strings are recognised by indentation only
+  (more than four columns deeper than the file's shallowest added test
+  definition); a test patch that adds only a nested definition, without
+  its enclosing test, still counts it. Python is not parsed.
+- Diffs inside a code fence keep their `+`, `-` and space prefixes as
+  tokens; only unfenced diffs are stripped of them.
 - Nothing is executed: no repository checkout, no test run, no check that
   the tests fail before the fix. Images in issues are not looked at.
 - The overlap with the SWE-Bench+ leakage set could not be measured because
@@ -388,6 +436,12 @@ of leaking instances, so the overlap could not be measured.
 - [reporewind](https://github.com/vipul21435/reporewind): resolve Python fix commits into source and test patches, the input issuelint reads.
 - [taskledger](https://github.com/vipul21435/taskledger): schema validation and lint rules for benchmark-task bundles.
 - [graderguard](https://github.com/vipul21435/graderguard): audit graders for reward hacking and flakiness.
+
+Outside work this tool reads or is measured against:
+
+- [SWE-bench](https://github.com/SWE-bench/SWE-bench): the benchmark, its datasets and the evaluation harness that runs the tests; issuelint reads its task format and never runs anything.
+- The [SWE-bench Verified annotation instructions](https://cdn.openai.com/introducing-swe-bench-verified/swe-b-annotation-instructions.pdf): human annotators judging underspecification and test validity, the manual counterpart of these checks and the labels used above.
+- [SWE-Bench+](https://arxiv.org/abs/2410.06992): a manual reading of solution leakage and weak tests in resolved SWE-bench tasks.
 
 ## Licence
 
