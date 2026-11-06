@@ -32,6 +32,35 @@ def code_blocks(issue: str) -> list[str]:
     return blocks
 
 
+_TB_FILE_RE = re.compile(r'\bFile "[^"]+", line \d+')
+_TB_NUMBERED_RE = re.compile(r"^\s*(?:-*>\s*)?\d+\s")
+_TB_PYTEST_RE = re.compile(r"^>\s{2,}\S")
+
+
+def drop_traceback_source(text: str) -> str:
+    """Remove the source lines a traceback quotes.
+
+    A traceback shows the code as it was when the error happened, so it says
+    nothing about the fix. Dropped: the line after a Python ``File "...", line N``
+    header, IPython's numbered source lines (``    349 code``, ``--> 351 code``) and
+    pytest's ``>   code`` lines.
+    """
+    out: list[str] = []
+    skip_next = False
+    for line in text.splitlines():
+        if skip_next:
+            skip_next = False
+            continue
+        if _TB_FILE_RE.search(line):
+            skip_next = True
+            out.append(line)
+            continue
+        if _TB_NUMBERED_RE.match(line) or _TB_PYTEST_RE.match(line):
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def inline_code(issue: str) -> list[str]:
     """Single-backtick spans outside fenced blocks."""
     rest = _FENCE_RE.sub("\n", issue)

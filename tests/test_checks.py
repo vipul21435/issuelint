@@ -199,3 +199,23 @@ def test_scope_gap_reports_new_names_the_tests_rely_on():
     assert f.evidence[0].startswith("tests use parse_header")
     assert f.metrics["identifiers"] == 3
     assert f.metrics["unmentioned"] == 2
+
+
+def test_moved_code_quoted_in_a_traceback_is_not_leakage():
+    from issuelint.records import TaskRecord
+
+    patch = (
+        "--- a/pkg/svm.py\n+++ b/pkg/svm.py\n@@ -1,3 +1,5 @@ def fit(self):\n"
+        "-        self.dual_coef_ = sp.csr_matrix((data, indices, indptr), shape=shape)\n"
+        "+        if n_sv == 0:\n+            self.dual_coef_ = sp.csr_matrix([])\n+        else:\n"
+        "+            self.dual_coef_ = sp.csr_matrix((data, indices, indptr), shape=shape)\n"
+    )
+    issue = (
+        "fit fails on empty support vectors:\n```\nTraceback (most recent call last):\n"
+        '  File "svm.py", line 3, in fit\n'
+        "    self.dual_coef_ = sp.csr_matrix((data, indices, indptr), shape=shape)\n"
+        "ZeroDivisionError: float division by zero\n```\n"
+    )
+    f = run_checks(TaskRecord(id="t", issue=issue, patch=patch)).finding("solution_leakage")
+    assert f.metrics["shared_ngrams"] == 0
+    assert not f.flagged

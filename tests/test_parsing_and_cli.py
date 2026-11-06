@@ -228,3 +228,30 @@ def test_check_stats_and_markdown(tmp_path: Path):
     out = tmp_path / "s.md"
     assert main(["check", str(SAMPLE), "--quiet", "--examples", "1", "--markdown", str(out)]) == 0
     assert "`leaky-solution`" in out.read_text(encoding="utf-8")
+
+
+def test_traceback_source_lines_are_dropped():
+    from issuelint.text import drop_traceback_source
+
+    text = "\n".join(
+        [
+            "Traceback (most recent call last):",
+            '  File "pkg/a.py", line 3, in f',
+            "    return compute(x) / total",
+            'INTERNALERROR>   File "saferepr.py", line 23, in g',
+            "INTERNALERROR>     exc_info, obj.__class__.__name__, id(obj)",
+            "    349 vmin, vmax = axis.convert_units((vmin, vmax))",
+            "--> 351 b = forward(vmax) - forward(vmin)",
+            ">       assert helper() == 2",
+            "ZeroDivisionError: division by zero",
+            "x = compute(1)",
+        ]
+    )
+    kept = drop_traceback_source(text)
+    assert "compute(x) / total" not in kept
+    assert "id(obj)" not in kept
+    assert "convert_units" not in kept
+    assert "forward(vmax)" not in kept
+    assert "helper()" not in kept
+    assert "ZeroDivisionError" in kept
+    assert "x = compute(1)" in kept

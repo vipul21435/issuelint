@@ -28,6 +28,7 @@ from issuelint.text import (
     code_blocks,
     code_lines,
     code_ngrams,
+    drop_traceback_source,
     inline_code,
     mentions,
     mentions_path,
@@ -133,16 +134,22 @@ def _cap(items: list[str], limit: int) -> list[str]:
 
 
 def _issue_code_text(issue: str) -> str:
-    return "\n".join([*code_blocks(issue), *inline_code(issue)])
+    return drop_traceback_source("\n".join([*code_blocks(issue), *inline_code(issue)]))
 
 
 def check_solution_leakage(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Finding:
-    added = code_lines(patch.added_lines(include_tests=False))
-    added_tokens = tokens("\n".join(added))
-    patch_grams = code_ngrams(added_tokens, t.ngram)
+    # An added line whose tokens equal a removed line's is moved or re-indented code,
+    # not new code: an issue that quotes it (often in a traceback) shows the old code.
+    removed = {tuple(tokens(line)) for line in patch.removed_lines(include_tests=False)}
+    added = [
+        line
+        for line in code_lines(patch.added_lines(include_tests=False))
+        if tuple(tokens(line)) not in removed
+    ]
+    patch_grams = code_ngrams(tokens("\n".join(added)), t.ngram)
     issue_grams = set(code_ngrams(tokens(_issue_code_text(record.issue)), t.ngram))
     if not patch_grams:
-        return Finding("solution_leakage", 0.0, False, "no added code of at least one n-gram")
+        return Finding("solution_leakage", 0.0, False, "no new added code of at least one n-gram")
     hits = [g for g in patch_grams if g in issue_grams]
     score = len(hits) / len(patch_grams)
     evidence: list[str] = []
