@@ -308,31 +308,41 @@ of leaking instances, so the overlap could not be measured.
 
 ## Limitations
 
+- Solution leakage sees overlap of code tokens only. A fix described in
+  prose ("add a branch for kelvin"), which SWE-Bench+ counts, scores 0.
+  Issue code that the patch moves into a docstring example or an error
+  message the issue already quotes still counts as overlap (the two false
+  flags in the Lite reading above).
+- Underspecification is four keyword and length signals. Against the
+  Verified annotations it reaches AUC 0.57; it is a weak screen, and
+  `has_error_text` carries no information about the human label on that
+  data. No model of whether the expected behaviour is clear is implemented.
+- `tests_use_new_names` over-approximates "new": the patch hunks show only
+  the changed lines, so a name that exists elsewhere in the file but is not
+  in a removed line counts as new. On the Verified annotations it does not
+  beat gold-patch size as a predictor of test problems.
 - The definition patterns cover Python, JavaScript and TypeScript, Rust and
   Go. Other languages still get the n-gram checks, but `scope_gap` and the
   identifier half of `location_hints` see only hunk context headers.
-- Underspecification is keyword based. An issue can describe a reproduction
-  in words the patterns do not match, and an issue can match them without
-  being specific.
-- `solution_leakage` sees overlap of code tokens. A fix described in prose
-  ("add a branch for kelvin") scores 0 even though it gives the solution
-  away.
 - `test_leakage` reads test names from `def test_*`, `it("...")`,
   `test("...")`, `fn test_*` and `func Test*`; parametrised or generated
-  tests are missed.
-- No model of what a test checks, no execution, no comparison with a
-  published leakage analysis yet.
+  tests are missed. It does not read `FAIL_TO_PASS` lists.
+- Nothing is executed: no repository checkout, no test run, no check that
+  the tests fail before the fix. Images in issues are not looked at.
+- The overlap with the SWE-Bench+ leakage set could not be measured because
+  that list of instances is not published.
 
 ## Related tools
 
-- https://github.com/vipul21435/taskgate: review gates for pull requests that add benchmark tasks.
-- https://github.com/vipul21435/datasieve: filtering of training and evaluation records.
-- https://github.com/vipul21435/verifybench: checks on benchmark verifiers.
-- https://github.com/vipul21435/patchmin: minimal patches for issue-to-fix tasks.
-- https://github.com/vipul21435/taskledger: a ledger of task records and their state.
+- [commitminer](https://github.com/vipul21435/commitminer): mine and rank candidate tasks from repository history.
+- [reporewind](https://github.com/vipul21435/reporewind): resolve Python fix commits into source and test patches, the input issuelint reads.
+- [taskledger](https://github.com/vipul21435/taskledger): schema validation and lint rules for benchmark-task bundles.
+- [graderguard](https://github.com/vipul21435/graderguard): audit graders for reward hacking and flakiness.
+- [patchmin](https://github.com/vipul21435/patchmin): minimal patches for issue-to-fix tasks.
+- [evalstats](https://github.com/vipul21435/evalstats): statistics for comparing evaluation runs.
 
 ## Licence
 
-MIT.
+MIT, see [LICENSE](LICENSE).
 
 Built by Vipul Raj Jha · https://vipul21435.github.io
