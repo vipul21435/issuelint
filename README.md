@@ -28,6 +28,10 @@ the Parquet files that SWE-bench splits are published in needs `pyarrow`:
 pip install "issuelint[parquet] @ git+https://github.com/vipul21435/issuelint"
 ```
 
+The tests run offline in about a second. On 2026-11-06,
+`uv run --extra dev pytest --cov=issuelint` gave 73 passed and 99 % line and
+branch coverage (lowest modules: `cli.py` and `report.py`, 98 %).
+
 ## Quickstart
 
 Input is a `.jsonl` (one object per line), `.json` or `.parquet` file. Each
