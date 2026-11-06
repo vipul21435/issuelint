@@ -208,3 +208,23 @@ def test_quotes_are_one_token_and_punctuation_grams_are_dropped():
     assert not informative((")", ")", ",", "0", "]", ")"))
     assert informative(("x", ".", "y", "(", "z", ")"))
     assert code_ngrams(tokens(") ) ) ] ] ]"), 3) == []
+
+
+def test_check_stats_and_markdown(tmp_path: Path):
+    from issuelint.checks import run_all
+    from issuelint.report import check_stats, to_markdown
+
+    reports = run_all(load_records(SAMPLE))
+    stats = {s.check: s for s in check_stats(reports, examples=2)}
+    assert stats["solution_leakage"].flagged == 1
+    assert stats["solution_leakage"].examples == ["leaky-solution"]
+    assert stats["location_hints"].flagged == 0
+    assert stats["location_hints"].nonzero == 3
+    assert len(stats["location_hints"].examples) == 2
+    assert 0.0 <= stats["scope_gap"].nonzero_share <= 1.0
+    md = to_markdown(reports)
+    assert md.startswith("4 tasks.")
+    assert "| `location_hints` | never flagged |" in md
+    out = tmp_path / "s.md"
+    assert main(["check", str(SAMPLE), "--quiet", "--examples", "1", "--markdown", str(out)]) == 0
+    assert "`leaky-solution`" in out.read_text(encoding="utf-8")

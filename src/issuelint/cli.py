@@ -9,7 +9,7 @@ from pathlib import Path
 from issuelint import __version__
 from issuelint.checks import Thresholds, run_all
 from issuelint.records import RecordError, load_records
-from issuelint.report import explain, summary, table, to_csv, to_json
+from issuelint.report import explain, summary, table, to_csv, to_json, to_markdown
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,6 +30,16 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--explain", action="store_true", help="print evidence for every task")
     check.add_argument("--json", type=Path, metavar="FILE", help="write findings as JSON")
     check.add_argument("--csv", type=Path, metavar="FILE", help="write scores and flags as CSV")
+    check.add_argument(
+        "--markdown", type=Path, metavar="FILE", help="write the per-check shares as Markdown"
+    )
+    check.add_argument(
+        "--examples",
+        type=int,
+        default=0,
+        metavar="N",
+        help="list up to N example ids per check in the summary (0)",
+    )
     check.add_argument("--quiet", action="store_true", help="no table, only the summary")
     check.add_argument(
         "--fail-on-flag",
@@ -102,7 +112,9 @@ def main(argv: list[str] | None = None) -> int:
         for r in reports:
             print(explain(r))
             print()
-    print(summary(reports))
+    print(summary(reports, examples=args.examples))
+    if args.markdown:
+        args.markdown.write_text(to_markdown(reports, max(args.examples, 3)), encoding="utf-8")
     if args.json:
         args.json.write_text(to_json(reports), encoding="utf-8")
     if args.csv:
