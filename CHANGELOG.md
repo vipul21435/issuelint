@@ -11,6 +11,22 @@
 - `test_leakage` leaves assertion lines shorter than one n-gram out of its
   total; results in the README and `docs/results.md` were rerun.
 - The package ships a `py.typed` marker.
+- `test_leakage` takes test names from `FAIL_TO_PASS` alone when the record
+  has it, skips test definitions nested in strings (by indentation), ignores
+  `describe()` names and counts a one-word `it()`/`test()` title only when
+  the issue quotes it.
+- Issue code also includes unfenced unified diffs, `~~~` fences and
+  unclosed fences; fences are found line by line, in linear time.
+- File path mentions match as whole names (`base.py` no longer matches
+  inside `database.py`).
+- Undecodable input (not UTF-8, not Parquet), output files that cannot be
+  written, malformed `agree` findings, share thresholds outside 0 to 1 and
+  non-finite `--positive-at` exit 2 with a one-line error.
+- `agree` reads CSVs with a byte-order mark, says when no id matches, and
+  rejects non-finite scores and labels.
+- `test_names_from_ids` is renamed `names_from_test_ids`, so pytest does not
+  collect it when imported into a test module.
+- Results in the README and `docs/results.md` were rerun.
 
 ## 0.1.0
 
