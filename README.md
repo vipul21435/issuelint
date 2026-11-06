@@ -442,6 +442,8 @@ of leaking instances, so the overlap could not be measured.
 - [reporewind](https://github.com/vipul21435/reporewind): resolve Python fix commits into source and test patches, the input issuelint reads.
 - [taskledger](https://github.com/vipul21435/taskledger): schema validation and lint rules for benchmark-task bundles.
 - [graderguard](https://github.com/vipul21435/graderguard): audit graders for reward hacking and flakiness.
+- [contamscan](https://github.com/vipul21435/contamscan): how much of an evaluation set appears in a training corpus, the other kind of leakage, measured with published n-gram overlap methods.
+- [awesome-coding-agent-evals](https://github.com/vipul21435/awesome-coding-agent-evals): a curated list of benchmarks, harnesses, datasets and papers for coding agents, including the SWE-bench variants checked here.
 
 Outside work this tool reads or is measured against:
 
