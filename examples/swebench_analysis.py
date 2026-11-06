@@ -74,10 +74,13 @@ def agreement_table(
     rows_all = {r.name: r for r in agreement([r.as_dict() for r in reports], labels, 2)}
     held = {i: v for i, v in labels.items() if held_out(i)}
     rows_held = {r.name: r for r in agreement([r.as_dict() for r in reports], held, 2)}
+    if not rows_all:
+        return [f"Label `{label} >= 2`: no score varies on the annotated tasks."]
     first = next(iter(rows_all.values()))
+    held_n = next(iter(rows_held.values())).tasks if rows_held else 0
     lines = [
         f"Label `{label} >= 2`: {first.tasks} annotated tasks, {first.positives} positive; "
-        f"held-out half: {next(iter(rows_held.values())).tasks} tasks.",
+        f"held-out half: {held_n} tasks.",
         "",
         "| score or metric | AUC, all (95 % interval) | AUC, held-out half "
         "| flagged among positives | flagged among negatives |",
@@ -85,13 +88,13 @@ def agreement_table(
     ]
     for name in names:
         a, h = rows_all.get(name), rows_held.get(name)
-        if a is None or h is None:
+        if a is None:
             continue
+        held_cell = "n/a" if h is None else f"{h.auc:.3f} ({h.low:.3f} to {h.high:.3f})"
         fp = "" if a.flagged_positive is None else f"{100 * a.flagged_positive:.1f} %"
         fn = "" if a.flagged_negative is None else f"{100 * a.flagged_negative:.1f} %"
         lines.append(
-            f"| `{name}` | {a.auc:.3f} ({a.low:.3f} to {a.high:.3f}) "
-            f"| {h.auc:.3f} ({h.low:.3f} to {h.high:.3f}) | {fp} | {fn} |"
+            f"| `{name}` | {a.auc:.3f} ({a.low:.3f} to {a.high:.3f}) | {held_cell} | {fp} | {fn} |"
         )
     return lines
 
