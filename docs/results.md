@@ -42,7 +42,7 @@ Examples (highest-scoring flagged tasks):
 
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 32 (10.7 %) | 41 (8.2 %) | 126 (5.5 %) | 28 (5.1 %) |
+| `solution_leakage` | 33 (11.0 %) | 42 (8.4 %) | 131 (5.7 %) | 28 (5.1 %) |
 | `test_leakage` | 7 (2.3 %) | 17 (3.4 %) | 40 (1.7 %) | 3 (0.5 %) |
 | `location_hints` | 57.7 % (score > 0) | 62.2 % (score > 0) | 64.7 % (score > 0) | 56.8 % (score > 0) |
 | `underspecification` | 117 (39.0 %) | 218 (43.6 %) | 981 (42.8 %) | 139 (25.4 %) |
@@ -98,7 +98,7 @@ Label `false_negative >= 2`: 1699 annotated tasks, 1039 positive; held-out half:
 | --- | ---: | ---: | ---: | ---: |
 | `scope_gap` | 0.520 (0.494 to 0.546) | 0.507 (0.470 to 0.543) | 81.9 % | 72.3 % |
 | `scope_gap.unmentioned` | 0.642 (0.614 to 0.667) | 0.645 (0.607 to 0.681) |  |  |
-| `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |  |  |
+| `scope_gap.tests_use_new_names` | 0.676 (0.655 to 0.696) | 0.683 (0.654 to 0.713) |  |  |
 | `location_hints` | 0.474 (0.447 to 0.503) | 0.483 (0.447 to 0.519) | 0.0 % | 0.0 % |
 | `test_leakage` | 0.496 (0.490 to 0.501) | 0.494 (0.484 to 0.502) | 0.5 % | 1.4 % |
 | `solution_leakage.added_ngrams` | 0.703 (0.678 to 0.730) | 0.715 (0.680 to 0.751) |  |  |

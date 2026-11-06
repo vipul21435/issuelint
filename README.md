@@ -277,12 +277,12 @@ $ issuelint check $DATA/lite/test.parquet --quiet --examples 3
                        e.g. astropy__astropy-12907, astropy__astropy-14365, astropy__astropy-14995
 ```
 
-**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py $DATA --out docs/results.md --chart docs/signal_shares.png`, 85 s on a laptop; the output is the same on every run):
+**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py $DATA --out docs/results.md --chart docs/signal_shares.png`, 133 s on a laptop; the output is the same on every run):
 
 | check, tasks flagged | Lite (300) | Verified (500) | SWE-bench test (2294) | SWE-Bench+ (548) |
 | --- | ---: | ---: | ---: | ---: |
 | `solution_leakage` | 17 (5.7 %) | 19 (3.8 %) | 52 (2.3 %) | 12 (2.2 %) |
-| `solution_leakage`, `--with-hints` | 32 (10.7 %) | 41 (8.2 %) | 126 (5.5 %) | 28 (5.1 %) |
+| `solution_leakage`, `--with-hints` | 33 (11.0 %) | 42 (8.4 %) | 131 (5.7 %) | 28 (5.1 %) |
 | `test_leakage` | 3 (1.0 %) | 8 (1.6 %) | 22 (1.0 %) | 2 (0.4 %) |
 | `location_hints`, score > 0 | 41.7 % | 50.6 % | 52.1 % | 45.6 % |
 | `underspecification` | 153 (51.0 %) | 250 (50.0 %) | 1283 (55.9 %) | 218 (39.8 %) |
@@ -344,7 +344,7 @@ $ issuelint agree full.json $DATA/annotations/results/ensembled_annotations_publ
 | | `solution_leakage.added_ngrams` (patch size) | 0.597 (0.570 to 0.627) | 0.588 (0.547 to 0.627) |
 | false_negative >= 2 (1039 positive) | `scope_gap` | 0.520 (0.494 to 0.546) | 0.507 (0.470 to 0.543) |
 | | `scope_gap.unmentioned` | 0.642 (0.614 to 0.667) | 0.645 (0.607 to 0.681) |
-| | `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |
+| | `scope_gap.tests_use_new_names` | 0.676 (0.655 to 0.696) | 0.683 (0.654 to 0.713) |
 | | `solution_leakage.added_ngrams` (patch size) | 0.703 (0.678 to 0.730) | 0.715 (0.680 to 0.751) |
 
 The underspecification score ranks human-judged underspecified issues above
@@ -383,9 +383,9 @@ tasks (33.33 %) and 37 of 112 resolved Verified tasks (33.04 %), counting,
 by manual reading, any fix clearly outlined in the issue or its comments.
 Those shares are over the tasks one agent solved, a set that need not look
 like the whole split; issuelint's shares are over all tasks and count code overlap
-only: 17 of 300 Lite tasks from the issue alone and 32 of 300 with the
+only: 17 of 300 Lite tasks from the issue alone and 33 of 300 with the
 comments. As a share of the whole split, 18 of 300 is 6.0 % against
-issuelint's 5.7 % (issue only) and 10.7 % (with comments), but the two
+issuelint's 5.7 % (issue only) and 11.0 % (with comments), but the two
 counts are not over the same tasks and SWE-Bench+ does not publish its list
 of leaking instances, so the overlap could not be measured.
 
