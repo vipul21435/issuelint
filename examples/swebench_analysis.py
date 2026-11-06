@@ -167,6 +167,8 @@ def main() -> None:
                 "underspecification.has_error_text",
                 "underspecification.tokens",
                 "external_links",
+                "location_hints.identifiers",
+                "solution_leakage.added_ngrams",
             ],
         )
         out += [""]

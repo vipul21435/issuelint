@@ -281,6 +281,8 @@ $ issuelint agree full.json data/annotations/results/ensembled_annotations_publi
 | | `underspecification.has_expected_actual` | 0.451 (0.428 to 0.474) | 0.446 (0.411 to 0.480) |
 | | `underspecification.has_error_text` | 0.496 (0.473 to 0.519) | 0.494 (0.461 to 0.527) |
 | | `external_links` | 0.517 (0.493 to 0.544) | 0.504 (0.469 to 0.536) |
+| | `location_hints.identifiers` (changed definitions) | 0.558 (0.531 to 0.585) | 0.549 (0.512 to 0.587) |
+| | `solution_leakage.added_ngrams` (patch size) | 0.597 (0.570 to 0.627) | 0.588 (0.547 to 0.627) |
 | false_negative >= 2 (1039 positive) | `scope_gap` | 0.520 (0.494 to 0.546) | 0.507 (0.470 to 0.543) |
 | | `scope_gap.unmentioned` | 0.642 (0.614 to 0.667) | 0.645 (0.607 to 0.681) |
 | | `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |
@@ -291,7 +293,12 @@ the rest only a little better than chance (AUC 0.57); among its signals,
 the presence of an error text carries no information about the human label
 (0.50), and a reproduction and expected-against-actual wording are the
 useful parts (0.44 and 0.45, below 0.5 because their presence means a
-better-specified issue). For test problems, the count of new names the
+better-specified issue). Patch size alone ranks underspecified issues
+better than the four keyword signals combined: 0.597 against 0.568 on all
+tasks, and 0.588 against 0.577 on the held-out half, where the intervals
+overlap. Larger fixes go with issues the annotators found harder to pin
+down, so the underspecification score is not the best signal on this data.
+For test problems, the count of new names the
 tests rely on and the issue never mentions reaches 0.68 on the held-out
 half, but the size of the gold patch alone reaches 0.72: on this data the
 count is not better than patch size, and part of its signal is likely size.
@@ -318,9 +325,9 @@ of leaking instances, so the overlap could not be measured.
   message the issue already quotes still counts as overlap (the two false
   flags in the Lite reading above).
 - Underspecification is four keyword and length signals. Against the
-  Verified annotations it reaches AUC 0.57; it is a weak screen, and
-  `has_error_text` carries no information about the human label on that
-  data. No model of whether the expected behaviour is clear is implemented.
+  Verified annotations it reaches AUC 0.57, below gold-patch size (0.60);
+  it is a weak screen, and `has_error_text` carries no information about
+  the human label on that data. No model of whether the expected behaviour is clear is implemented.
 - `tests_use_new_names` over-approximates "new": the patch hunks show only
   the changed lines, so a name that exists elsewhere in the file but is not
   in a removed line counts as new. On the Verified annotations it does not

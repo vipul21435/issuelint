@@ -89,6 +89,8 @@ Label `underspecified >= 2`: 1699 annotated tasks, 650 positive; held-out half: 
 | `underspecification.has_error_text` | 0.496 (0.473 to 0.519) | 0.494 (0.461 to 0.527) |  |  |
 | `underspecification.tokens` | 0.445 (0.415 to 0.473) | 0.445 (0.404 to 0.485) |  |  |
 | `external_links` | 0.517 (0.493 to 0.544) | 0.504 (0.469 to 0.536) | 17.8 % | 10.5 % |
+| `location_hints.identifiers` | 0.558 (0.531 to 0.585) | 0.549 (0.512 to 0.587) |  |  |
+| `solution_leakage.added_ngrams` | 0.597 (0.570 to 0.627) | 0.588 (0.547 to 0.627) |  |  |
 
 Label `false_negative >= 2`: 1699 annotated tasks, 1039 positive; held-out half: 866 tasks.
 
