@@ -120,10 +120,17 @@ def load_jsonl(path: str | Path) -> list[TaskRecord]:
 
 
 def load_json(path: str | Path) -> list[TaskRecord]:
-    """Read a JSON file holding one record or a list of records."""
+    """Read a JSON file holding one record or a list of records.
+
+    A file of one object per line (JSON Lines saved with a ``.json`` suffix) is
+    read as JSONL.
+    """
+    text = Path(path).read_text(encoding="utf-8")
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(text)
     except json.JSONDecodeError as exc:
+        if exc.msg == "Extra data" and text.lstrip().startswith("{"):
+            return list(iter_jsonl(text.splitlines()))
         raise RecordError(f"{path}: not JSON ({exc.msg}, line {exc.lineno})") from exc
     rows = data if isinstance(data, list) else [data]
     records = []

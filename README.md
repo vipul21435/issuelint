@@ -53,7 +53,8 @@ git clone https://github.com/vipul21435/issuelint && cd issuelint
 pip install -e .
 ```
 
-Input is a `.jsonl` (one object per line), `.json` or `.parquet` file. Each
+Input is a `.jsonl` (one object per line), `.json` (one object, a list, or
+one object per line) or `.parquet` file. Each
 record has an issue, a gold patch and, optionally, a test patch and hints;
 both the plain keys (`id`, `issue`, `patch`, `test_patch`, `hints`) and the
 SWE-bench keys (`instance_id`, `problem_statement`, `patch`, `test_patch`,

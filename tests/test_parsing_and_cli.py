@@ -204,6 +204,19 @@ def test_row_errors_name_their_line_or_record(tmp_path: Path, capsys: pytest.Cap
         load_records(js)
 
 
+def test_json_lines_in_a_json_file_are_read_as_jsonl(tmp_path: Path):
+    rows = [{"id": "a", "issue": "i", "patch": "p"}, {"id": "b", "issue": "j", "patch": "q"}]
+    path = tmp_path / "split.json"
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    assert [r.id for r in load_records(path)] == ["a", "b"]
+    path.write_text('{"id": "a", "issue": "i", "patch": "p"}\n{"id": ')
+    with pytest.raises(RecordError, match="line 2: not JSON"):
+        load_records(path)
+    path.write_text("[1] [2]")
+    with pytest.raises(RecordError, match="not JSON"):
+        load_records(path)
+
+
 def test_parquet_row_errors_name_their_row(tmp_path: Path):
     pa = pytest.importorskip("pyarrow")
     pq = pytest.importorskip("pyarrow.parquet")
