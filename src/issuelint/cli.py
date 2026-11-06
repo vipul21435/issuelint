@@ -36,7 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"issuelint {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
-    check = sub.add_parser("check", help="run every check on a JSONL or JSON file of records")
+    check = sub.add_parser(
+        "check", help="run every check on a .jsonl, .json or .parquet file of records"
+    )
     check.add_argument("input", type=Path, help=".jsonl, .json or .parquet file of task records")
     check.add_argument("--limit", type=_count(0), help="check only the first N records")
     check.add_argument(
