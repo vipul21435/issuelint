@@ -156,7 +156,7 @@ print(sum(len(tokens(r.issue)) < 40 for r in rs), sum(len(r.issue.split()) < 40 
 | check | score | default threshold |
 | --- | --- | --- |
 | `solution_leakage` | share of the token n-grams (n = 6) of the gold patch's new code lines that also occur in the issue's code | 0.2 |
-| `test_leakage` | share of (test names + assertion lines) the test patch adds that the issue names (name as a whole word) or contains (every n-gram of the assertion); test names also come from `FAIL_TO_PASS` when the record has it | 0.34 |
+| `test_leakage` | share of (test names + assertion lines) the test patch adds that the issue names (name as a whole word) or contains (every n-gram of the assertion); test names come from `FAIL_TO_PASS` when the record has it, else from the test patch's top-level test definitions | 0.34 |
 | `location_hints` | share of (changed non-test files + changed identifiers) the issue names; a file counts when its path, a path suffix or its basename appears | never flagged |
 | `underspecification` | missing signals out of four: a reproduction (a code block or words such as "reproduce", "steps to"), expected-against-actual wording, error text (a traceback, exception or error name), and a length of at least 40 tokens | 0.5 |
 | `external_links` | 1.0 when the issue has links and no code block or error text of its own, 0.5 with links beside its own evidence, 0 without links | 1.0 |
@@ -173,6 +173,12 @@ Details that matter on real issues:
   show the code before the fix. With `S` the n-grams of the new code and `I`
   those of the issue's code, the score is `|{g in S : g in I}| / |S|`, with
   repeats in `S` counted.
+- *Test leakage* takes its test names from `FAIL_TO_PASS` when the record
+  carries one, since those are the tests that decide the task. Without it,
+  names come from the test patch, and a test definition indented more than
+  four columns deeper than the file's shallowest added one is skipped: in
+  pytest's own suite such a line is usually test source inside a `pytester`
+  string, often the issue's reproduction pasted in, not a test of its own.
 - *Test leakage* matches whole assertion lines, so all n-grams of an
   assertion must occur in the issue, not only the identifier-heavy ones.
   An assertion line shorter than one n-gram (`assert result`, or the opening

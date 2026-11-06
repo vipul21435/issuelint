@@ -173,14 +173,33 @@ def check_solution_leakage(record: TaskRecord, patch: ParsedPatch, t: Thresholds
     )
 
 
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" \t"))
+
+
 def _added_test_names(test_patch: ParsedPatch) -> list[str]:
+    """Test names on the test patch's added lines.
+
+    Within each file only definitions indented at most four columns deeper than
+    the file's shallowest added test definition count: deeper ones are usually
+    test source written inside a string (a pytester fixture), not tests of
+    their own.
+    """
     names: dict[str, None] = {}
-    for line in test_patch.added_lines():
-        for pattern in _TEST_NAME_RES:
-            match = pattern.match(line)
-            if match and match.groups():
-                names.setdefault(match.group(1), None)
-                break
+    for f in test_patch.files:
+        found: list[tuple[int, str]] = []
+        for line in f.added:
+            for pattern in _TEST_NAME_RES:
+                match = pattern.match(line)
+                if match and match.groups():
+                    found.append((_indent(line), match.group(1)))
+                    break
+        if not found:
+            continue
+        top = min(depth for depth, _ in found)
+        for depth, name in found:
+            if depth <= top + 4:
+                names.setdefault(name, None)
     return list(names)
 
 
@@ -203,9 +222,9 @@ def test_names_from_ids(ids: tuple[str, ...] | list[str]) -> list[str]:
 
 
 def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Thresholds) -> Finding:
-    names = list(
-        dict.fromkeys([*_added_test_names(test_patch), *test_names_from_ids(record.fail_to_pass)])
-    )
+    # FAIL_TO_PASS names the tests that decide the task; when it gives names,
+    # test definitions found in the test patch are not read.
+    names = test_names_from_ids(record.fail_to_pass) or _added_test_names(test_patch)
     asserts = [line.strip() for line in test_patch.added_lines() if _ASSERT_RE.match(line)]
     # An assertion shorter than one n-gram (``assert result``, the opening line
     # ``self.assertEqual(`` of a call split over lines) cannot be matched by its

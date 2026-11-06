@@ -287,3 +287,50 @@ def test_assertions_shorter_than_an_ngram_stay_out_of_the_total():
     assert f.metrics["assertions"] == 1
     assert f.score == 1.0
     assert f.evidence == ["issue contains the added assertion: assert a.parse('1 2') == [1, 2]"]
+
+
+# The shape of a pytest task whose issue reproduction is pasted into a
+# pytester source string inside the real test.
+PYTESTER_TEST_PATCH = '''diff --git a/testing/test_skipping.py b/testing/test_skipping.py
+--- a/testing/test_skipping.py
++++ b/testing/test_skipping.py
+@@ -1,3 +1,14 @@
++def test_reevaluate_dynamic_expr(pytester):
++    pytester.makepyfile(
++        """
++        import pytest
++
++        skip = True
++
++        @pytest.mark.skipif("skip")
++        def test_should_skip():
++            assert False
++        """
++    )
+'''
+PYTESTER_ISSUE = (
+    "Caching of skipif string conditions gives wrong results.\n\n"
+    "```py\nimport pytest\n\nskip = True\n\n@pytest.mark.skipif(\"skip\")\n"
+    "def test_should_skip():\n    assert False\n```\n"
+)
+
+
+def test_test_defs_inside_a_pytester_string_are_not_test_names():
+    record = TaskRecord(id="t", issue=PYTESTER_ISSUE, patch="", test_patch=PYTESTER_TEST_PATCH)
+    f = run_checks(record).finding("test_leakage")
+    assert f.metrics["test_names"] == 1
+    assert f.score == 0.0
+    assert not f.flagged
+
+
+def test_fail_to_pass_alone_names_the_tests_when_present():
+    record = TaskRecord(
+        id="t",
+        issue=PYTESTER_ISSUE,
+        patch="",
+        test_patch=PYTESTER_TEST_PATCH.replace("+def test_reevaluate", "+def test_reeval"),
+        fail_to_pass=("testing/test_skipping.py::test_reevaluate_dynamic_expr",),
+    )
+    f = run_checks(record).finding("test_leakage")
+    assert f.metrics["test_names"] == 1
+    assert f.score == 0.0
