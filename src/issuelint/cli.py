@@ -170,6 +170,13 @@ def _agree(args: argparse.Namespace) -> int:
     except (ValueError, OSError) as exc:
         print(f"issuelint: {exc}", file=sys.stderr)
         return 2
+    if not {str(r["id"]) for r in reports} & set(labels):
+        print(
+            f"issuelint: no task id in {args.findings} matches column "
+            f"{args.id_column} of {args.labels}",
+            file=sys.stderr,
+        )
+        return 2
     rows = agreement(reports, labels, args.positive_at, args.resamples, args.seed)
     print(format_agreement(rows, args.label, args.positive_at))
     return 0

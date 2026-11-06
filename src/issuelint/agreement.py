@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -39,10 +40,13 @@ def _average_ranks(values: Sequence[float]) -> list[float]:
 def auc(scores: Sequence[float], labels: Sequence[bool]) -> float:
     """Area under the ROC curve of ``scores`` for the boolean ``labels``.
 
-    Raises ``ValueError`` when the labels hold only one class.
+    Raises ``ValueError`` when the labels hold only one class or a score is not
+    finite (a NaN has no rank, so the result would depend on the input order).
     """
     if len(scores) != len(labels):
         raise ValueError("scores and labels differ in length")
+    if not all(math.isfinite(s) for s in scores):
+        raise ValueError("scores must be finite numbers")
     n_pos = sum(1 for y in labels if y)
     n_neg = len(labels) - n_pos
     if n_pos == 0 or n_neg == 0:
@@ -95,9 +99,13 @@ class AgreementRow:
 
 
 def load_labels(path: str | Path, label: str, id_column: str = "instance_id") -> dict[str, float]:
-    """Read ``id_column`` and the numeric column ``label`` of a CSV; blank labels are skipped."""
+    """Read ``id_column`` and the numeric column ``label`` of a CSV; blank labels are skipped.
+
+    A UTF-8 byte-order mark (as spreadsheet programs write) is ignored. Labels
+    that are not finite numbers raise ``ValueError``.
+    """
     out: dict[str, float] = {}
-    with Path(path).open(encoding="utf-8", newline="") as handle:
+    with Path(path).open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         missing = {id_column, label} - set(reader.fieldnames or [])
         if missing:
@@ -105,8 +113,18 @@ def load_labels(path: str | Path, label: str, id_column: str = "instance_id") ->
         for row in reader:
             value = (row.get(label) or "").strip()
             if value:
-                out[row[id_column]] = float(value)
+                out[row[id_column]] = _finite(value, f"{path}, line {reader.line_num}")
     return out
+
+
+def _finite(value: object, where: str) -> float:
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        raise ValueError(f"{where}: {value!r} is not a number") from None
+    if not math.isfinite(number):
+        raise ValueError(f"{where}: {value!r} is not a finite number")
+    return number
 
 
 def load_findings(path: str | Path) -> list[dict[str, object]]:
@@ -133,6 +151,11 @@ def load_findings(path: str | Path) -> list[dict[str, object]]:
                 f"{path}: item {i} needs a 'findings' list of objects "
                 "with 'check', 'score' and 'flagged'"
             )
+        for f in findings:
+            where = f"{path}: item {i}, {f['check']}"
+            _finite(f["score"], where)
+            for key, value in (f.get("metrics") or {}).items():
+                _finite(value, f"{where}.{key}")
     return data
 
 

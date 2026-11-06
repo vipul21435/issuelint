@@ -110,3 +110,35 @@ def test_agree_command(tmp_path: Path, capsys):
     bad.write_text("{}", encoding="utf-8")
     with pytest.raises(ValueError, match="list"):
         load_findings(bad)
+
+
+def test_labels_csv_with_a_byte_order_mark(tmp_path: Path):
+    path = tmp_path / "bom.csv"
+    path.write_bytes(b"\xef\xbb\xbfinstance_id,l\na,1\n")
+    assert load_labels(path, "l") == {"a": 1.0}
+
+
+def test_agree_reports_when_no_id_matches(tmp_path: Path, capsys):
+    findings, _ = _labelled(tmp_path)
+    labels = tmp_path / "other.csv"
+    labels.write_text("instance_id,underspecified\nzz,3\nyy,0\n", encoding="utf-8")
+    assert main(["agree", str(findings), str(labels), "--label", "underspecified"]) == 2
+    assert "no task id" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["nan", "inf"])
+def test_non_finite_labels_and_scores_are_rejected(tmp_path: Path, value: str):
+    path = tmp_path / "l.csv"
+    path.write_text(f"instance_id,l\na,{value}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="finite"):
+        load_labels(path, "l")
+    findings = tmp_path / "f.json"
+    report = {"id": "a", "findings": [{"check": "c", "score": float(value), "flagged": False}]}
+    findings.write_text(json.dumps([report]), encoding="utf-8")
+    with pytest.raises(ValueError, match="finite"):
+        load_findings(findings)
+
+
+def test_auc_rejects_nan_scores():
+    with pytest.raises(ValueError, match="finite"):
+        auc([float("nan"), 1.0, 0.0, 0.5], [True, False, False, True])
