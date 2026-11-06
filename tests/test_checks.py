@@ -424,6 +424,7 @@ def test_an_unfenced_diff_in_the_issue_is_read_as_code():
     )
     f = run_checks(TaskRecord(id="t", issue=issue, patch=SAVE_PATCH)).finding("solution_leakage")
     assert f.flagged
+    assert f.score == 1.0
     assert any("transaction.atomic" in e for e in f.evidence)
 
 
