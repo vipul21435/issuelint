@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from issuelint.text import code_lines
+
 _FILE_RE = re.compile(r"^diff --git a/(?P<a>\S+) b/(?P<b>\S+)$")
 _PLUS_FILE_RE = re.compile(r"^\+\+\+ (?:b/)?(?P<path>\S+)")
 _MINUS_FILE_RE = re.compile(r"^--- (?:a/)?(?P<path>\S+)")
@@ -24,14 +26,6 @@ _CONTEXT_NAME_RE = re.compile(
     r"\b(?:def|class|function|fn|func|struct|impl|trait)\s+([A-Za-z_$][\w$]*)"
 )
 _NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
-_COMMENT_LINE_RE = re.compile(r"^\s*(?:#|//|/\*|\*)")
-
-
-def code_lines_of(lines: list[str]) -> list[str]:
-    """Lines that are not blank and not a plain comment."""
-    return [line for line in lines if line.strip() and not _COMMENT_LINE_RE.match(line)]
-
-
 _TEST_PATH_RE = re.compile(
     r"(?:^|/)(?:tests?|__tests__|spec|specs|testing)(?:/|$)|(?:^|/)(?:test_[^/]*|[^/]*_test\.[^/]+|[^/]*\.(?:test|spec)\.[^/]+)$"
 )
@@ -97,7 +91,7 @@ class ParsedPatch:
         """
         removed = set(_NAME_RE.findall("\n".join(self.removed_lines(include_tests=False))))
         found: dict[str, None] = {}
-        for line in code_lines_of(self.added_lines(include_tests=False)):
+        for line in code_lines(self.added_lines(include_tests=False)):
             for name in _NAME_RE.findall(line):
                 if len(name) >= min_length and name not in removed:
                     found.setdefault(name, None)

@@ -19,7 +19,6 @@ Scores are plain ratios so that they can be read without the code:
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 
 from issuelint.patch import ParsedPatch, parse_patch
@@ -379,8 +378,6 @@ CHECKS: tuple[str, ...] = (
     "external_links",
     "scope_gap",
 )
-
-_CheckFn = Callable[[TaskRecord, ParsedPatch, Thresholds], Finding]
 
 
 def run_checks(record: TaskRecord, thresholds: Thresholds | None = None) -> TaskReport:
