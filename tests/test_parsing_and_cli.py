@@ -136,7 +136,7 @@ def test_text_helpers():
     issue = (
         "Run `foo()`:\n\n```py\nx = 1\n```\n\n    y = 2\n    z = 3\n\nsee https://a.invalid/p, ok"
     )
-    assert code_blocks(issue) == ["x = 1\n", "    y = 2\n    z = 3"]
+    assert code_blocks(issue) == ["x = 1", "    y = 2\n    z = 3"]
     assert inline_code(issue) == ["foo()"]
     assert urls(issue) == ["https://a.invalid/p"]
     assert tokens("a.b(1) != c") == ["a", ".", "b", "(", "1", ")", "!=", "c"]
@@ -361,3 +361,23 @@ def test_out_of_range_counts_exit_2(capsys: pytest.CaptureFixture[str], flags: l
         main(["check", str(SAMPLE), "--quiet", *flags])
     assert exc.value.code == 2
     assert flags[0] in capsys.readouterr().err
+
+
+def test_fences_are_split_line_by_line():
+    from issuelint.text import split_fences
+
+    issue = "a\n  ```py\nx = 1\ny = 2```\nb ```` c\n~~~\nz\n~~~\nend"
+    blocks, outside = split_fences(issue)
+    assert blocks == ["x = 1\ny = 2", "z"]
+    assert outside == ["a", "", "b ```` c", "", "end"]
+    # A backtick opener whose info string holds a backtick is a code span.
+    assert split_fences("```x = 1``` here") == ([], ["```x = 1``` here"])
+
+
+def test_backtick_heavy_text_is_linear():
+    import time
+
+    start = time.perf_counter()
+    code_blocks("```" * 70_000)
+    inline_code("```" * 70_000)
+    assert time.perf_counter() - start < 1.0

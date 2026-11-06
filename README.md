@@ -117,8 +117,12 @@ behind the score and evidence lines. Nothing is learned; every rule is below.
 **Parsing.** Patches are parsed as unified diffs into files, added lines,
 removed lines and hunk context headers. Paths under `tests/`, `test/`,
 `__tests__/`, `spec/` or named `test_*`, `*_test.*`, `*.test.*`, `*.spec.*`
-count as test files. Issue code is the content of fenced blocks, indented
-blocks of two or more lines, and single-backtick spans. Tokens are
+count as test files. Issue code is the content of fenced blocks (backticks or
+tildes; an unclosed fence runs to the end of the text, as GitHub renders
+it), unfenced unified diffs (from a `diff --git`, `--- `/`+++ ` or `@@ -N`
+header; context and added lines kept without their prefix, removed lines
+dropped), indented blocks of two or more lines, and single-backtick spans.
+Fences are found line by line, so the time is linear in the issue length. Tokens are
 identifiers, numbers and punctuation with whitespace dropped and single and
 double quotes merged, so reformatting does not break a match.
 

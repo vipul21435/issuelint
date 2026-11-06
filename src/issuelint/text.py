@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-_FENCE_RE = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+_FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 _URL_RE = re.compile(r"https?://[^\s)>\]\"']+")
 _TOKEN_RE = re.compile(
@@ -13,14 +13,99 @@ _TOKEN_RE = re.compile(
 )
 _WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _COMMENT_RE = re.compile(r"^\s*(?:#|//|/\*|\*)")
+_DIFF_START_RE = re.compile(r"^(?:diff --git |@@ -\d)")
+
+
+def split_fences(issue: str) -> tuple[list[str], list[str]]:
+    """Fenced block contents, and the lines outside fences.
+
+    A fence opens on a line that starts (after up to three spaces) with three or
+    more backticks or tildes; a backtick opener whose info string holds a
+    backtick is a code span, not a fence. The block ends at the first line that
+    holds the same marker, and text before the marker on that line belongs to
+    the block. An unclosed fence runs to the end of the text, as GitHub renders
+    it. One pass over the lines, so the time is linear in the text length.
+    """
+    blocks: list[str] = []
+    outside: list[str] = []
+    current: list[str] | None = None
+    marker = ""
+    for line in issue.splitlines():
+        if current is None:
+            match = _FENCE_OPEN_RE.match(line)
+            if match and not (match.group(1)[0] == "`" and "`" in line[match.end() :]):
+                marker = match.group(1)
+                current = []
+            else:
+                outside.append(line)
+            continue
+        at = line.find(marker)
+        if at < 0:
+            current.append(line)
+            continue
+        if line[:at].strip():
+            current.append(line[:at])
+        blocks.append("\n".join(current))
+        current = None
+        outside.append(line[at + len(marker) :].lstrip(marker[0]))
+    if current is not None:
+        blocks.append("\n".join(current))
+    return blocks, outside
+
+
+def _diff_blocks(lines: list[str]) -> tuple[list[str], list[str]]:
+    """Unfenced unified diffs, as the code they leave behind, and the other lines.
+
+    A diff starts at a ``diff --git`` line, a ``--- `` line followed by ``+++ ``,
+    or an ``@@ -N`` hunk header, and runs through lines that start with a space, a tab,
+    ``+``, ``-`` or a backslash (blank lines included). Context and added lines
+    are kept without their one-character prefix; removed lines and headers are
+    dropped, since they show the code before the change.
+    """
+    blocks: list[str] = []
+    rest: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        starts = _DIFF_START_RE.match(line) or (
+            line.startswith("--- ") and i + 1 < len(lines) and lines[i + 1].startswith("+++ ")
+        )
+        if not starts:
+            rest.append(line)
+            i += 1
+            continue
+        kept: list[str] = []
+        while i < len(lines):
+            line = lines[i]
+            if line.startswith(("diff --git ", "index ", "--- ", "+++ ", "@@", "-", "\\")):
+                pass
+            elif line.startswith(("+", " ")):
+                kept.append(line[1:])
+            elif line.startswith("\t"):
+                # Context whose leading space was turned into a tab on the way
+                # into the tracker (seen in Trac tickets).
+                kept.append(line)
+            elif not line.strip():
+                kept.append("")
+            else:
+                break
+            i += 1
+        if any(k.strip() for k in kept):
+            blocks.append("\n".join(kept))
+    return blocks, rest
 
 
 def code_blocks(issue: str) -> list[str]:
-    """Fenced blocks first, then indented blocks (four spaces or a tab) outside fences."""
-    blocks = [m.group(1) for m in _FENCE_RE.finditer(issue)]
-    rest = _FENCE_RE.sub("\n", issue)
+    """Code in an issue: fenced blocks, unfenced diffs, then indented blocks.
+
+    Indented blocks are runs of two or more lines starting with four spaces or a
+    tab, outside fences and diffs.
+    """
+    blocks, outside = split_fences(issue)
+    diffs, rest = _diff_blocks(outside)
+    blocks.extend(diffs)
     current: list[str] = []
-    for line in rest.splitlines():
+    for line in rest:
         if line.startswith(("    ", "\t")) and line.strip():
             current.append(line)
         elif current:
@@ -63,7 +148,7 @@ def drop_traceback_source(text: str) -> str:
 
 def inline_code(issue: str) -> list[str]:
     """Single-backtick spans outside fenced blocks."""
-    rest = _FENCE_RE.sub("\n", issue)
+    rest = "\n".join(split_fences(issue)[1])
     return [m.group(1).strip() for m in _INLINE_CODE_RE.finditer(rest)]
 
 

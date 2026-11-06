@@ -310,7 +310,7 @@ PYTESTER_TEST_PATCH = '''diff --git a/testing/test_skipping.py b/testing/test_sk
 '''
 PYTESTER_ISSUE = (
     "Caching of skipif string conditions gives wrong results.\n\n"
-    "```py\nimport pytest\n\nskip = True\n\n@pytest.mark.skipif(\"skip\")\n"
+    '```py\nimport pytest\n\nskip = True\n\n@pytest.mark.skipif("skip")\n'
     "def test_should_skip():\n    assert False\n```\n"
 )
 
@@ -334,3 +334,58 @@ def test_fail_to_pass_alone_names_the_tests_when_present():
     f = run_checks(record).finding("test_leakage")
     assert f.metrics["test_names"] == 1
     assert f.score == 0.0
+
+
+SAVE_PATCH = """diff --git a/db/creation.py b/db/creation.py
+--- a/db/creation.py
++++ b/db/creation.py
+@@ -1,4 +1,5 @@ class BaseDatabaseCreation:
+     def deserialize_db_from_string(self, data):
+         data = StringIO(data)
+-        for obj in serializers.deserialize("json", data, using=self.connection.alias):
+-            obj.save()
++        with transaction.atomic(using=self.connection.alias):
++            for obj in serializers.deserialize("json", data, using=self.connection.alias):
++                obj.save()
+"""
+
+
+def test_an_unfenced_diff_in_the_issue_is_read_as_code():
+    issue = (
+        "Restoring the test database can fail on foreign keys.\n\n"
+        "I'm suggesting to fix it as follows:\n\n"
+        "diff --git a/db/creation.py b/db/creation.py\n"
+        "index bca8376..7bed2be 100644\n"
+        "--- a/db/creation.py\n"
+        "+++ b/db/creation.py\n"
+        "@@ -1,4 +1,5 @@\n"
+        "\t\tdata = StringIO(data)\n"
+        '-        for obj in serializers.deserialize("json", data, using=self.connection.alias):\n'
+        "-            obj.save()\n"
+        "+        with transaction.atomic(using=self.connection.alias):\n"
+        '+            for obj in serializers.deserialize("json", data, '
+        "using=self.connection.alias):\n"
+        "+                obj.save()\n"
+        "\nNote the loop is unchanged.\n"
+    )
+    f = run_checks(TaskRecord(id="t", issue=issue, patch=SAVE_PATCH)).finding("solution_leakage")
+    assert f.flagged
+    assert any("transaction.atomic" in e for e in f.evidence)
+
+
+@pytest.mark.parametrize(
+    "fix",
+    [
+        "Fix:\n~~~python\nreturn int(value.strip()) if value else default_value\n~~~\n",
+        "Fix:\n```python\nreturn int(value.strip()) if value else default_value\n",
+    ],
+    ids=["tilde-fence", "unclosed-fence"],
+)
+def test_tilde_and_unclosed_fences_are_code(fix: str):
+    patch = (
+        "--- a/conf.py\n+++ b/conf.py\n@@ -1,2 +1,2 @@ def read(value, default_value):\n"
+        "-    return int(value)\n"
+        "+    return int(value.strip()) if value else default_value\n"
+    )
+    f = run_checks(TaskRecord(id="t", issue=fix, patch=patch)).finding("solution_leakage")
+    assert f.score == 1.0
