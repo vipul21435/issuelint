@@ -111,6 +111,15 @@ def test_parse_patch_hunk_with_wrong_count_ends_at_next_file():
     assert [f.removed for f in p.files] == [[], []]
 
 
+def test_parse_bare_hunk_with_no_newline_markers():
+    p = parse_patch(
+        "@@ -1 +1 @@\n-x = 1\n\\ No newline at end of file\n+x = 2\n\\ No newline at end of file\n"
+    )
+    assert p.paths == ["<unknown>"]
+    assert p.files[0].removed == ["x = 1"]
+    assert p.files[0].added == ["x = 2"]
+
+
 def test_parse_patch_blank_context_line_without_space():
     p = parse_patch("--- a/a.py\n+++ b/a.py\n@@ -1,3 +1,3 @@\n x = 1\n\n-y = 1\n+y = 2\n")
     assert p.files[0].added == ["y = 2"]
