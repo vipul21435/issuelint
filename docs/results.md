@@ -5,7 +5,7 @@
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
 | `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
-| `test_leakage` | 4 (1.3 %) | 7 (1.4 %) | 25 (1.1 %) | 3 (0.5 %) |
+| `test_leakage` | 4 (1.3 %) | 7 (1.4 %) | 24 (1.0 %) | 3 (0.5 %) |
 | `location_hints` | 42.0 % (score > 0) | 51.0 % (score > 0) | 52.4 % (score > 0) | 46.2 % (score > 0) |
 | `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
 | `external_links` | 0 (0.0 %) | 51 (10.2 %) | 313 (13.6 %) | 75 (13.7 %) |
@@ -43,7 +43,7 @@ Examples (highest-scoring flagged tasks):
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
 | `solution_leakage` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
-| `test_leakage` | 8 (2.7 %) | 16 (3.2 %) | 43 (1.9 %) | 4 (0.7 %) |
+| `test_leakage` | 8 (2.7 %) | 16 (3.2 %) | 42 (1.8 %) | 4 (0.7 %) |
 | `location_hints` | 57.7 % (score > 0) | 62.6 % (score > 0) | 65.0 % (score > 0) | 58.0 % (score > 0) |
 | `underspecification` | 117 (39.0 %) | 220 (44.0 %) | 984 (42.9 %) | 140 (25.5 %) |
 | `external_links` | 15 (5.0 %) | 62 (12.4 %) | 350 (15.3 %) | 63 (11.5 %) |
@@ -98,5 +98,5 @@ Label `false_negative >= 2`: 1699 annotated tasks, 1039 positive; held-out half:
 | `scope_gap.unmentioned` | 0.642 (0.614 to 0.667) | 0.645 (0.607 to 0.681) |  |  |
 | `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |  |  |
 | `location_hints` | 0.473 (0.447 to 0.501) | 0.482 (0.447 to 0.518) | 0.0 % | 0.0 % |
-| `test_leakage` | 0.497 (0.490 to 0.504) | 0.497 (0.486 to 0.508) | 0.6 % | 1.4 % |
+| `test_leakage` | 0.495 (0.488 to 0.502) | 0.495 (0.484 to 0.505) | 0.6 % | 1.4 % |
 | `solution_leakage.added_ngrams` | 0.703 (0.678 to 0.730) | 0.715 (0.680 to 0.751) |  |  |
