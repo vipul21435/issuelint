@@ -98,19 +98,38 @@ class ParsedPatch:
         return list(found)
 
 
+def _starts_file(lines: list[str], index: int) -> bool:
+    """Whether ``lines[index:]`` opens with a ``--- ``, ``+++ ``, ``@@`` file header.
+
+    Inside a hunk no content line starts with ``@@``, so this triple can only be
+    a header; it lets a hunk with a wrong line count end at the next file.
+    """
+    return (
+        index + 2 < len(lines)
+        and lines[index].startswith("--- ")
+        and lines[index + 1].startswith("+++ ")
+        and _HUNK_RE.match(lines[index + 2]) is not None
+    )
+
+
 def parse_patch(text: str) -> ParsedPatch:
     """Parse a unified diff. Lines outside hunks are ignored except file headers.
 
     Each hunk ends when the line counts in its ``@@ -a,b +c,d @@`` header are
     used up, so a ``--- ``/``+++ `` pair after it starts a new file even when
-    the diff has no ``diff --git`` lines (plain ``diff -u`` output).
+    the diff has no ``diff --git`` lines (plain ``diff -u`` output). A hunk
+    whose header under-counts its lines still ends at a ``--- ``/``+++ ``/``@@``
+    triple.
     """
     parsed = ParsedPatch()
     current: FileDiff | None = None
     in_hunk = False
     old_left = new_left = 0
     old_path = "/dev/null"
-    for raw in text.splitlines():
+    lines = text.splitlines()
+    for index, raw in enumerate(lines):
+        if in_hunk and _starts_file(lines, index):
+            in_hunk = False  # the hunk header under-counted; trust the file header
         header = _FILE_RE.match(raw)
         if header:
             current = FileDiff(path=header.group("b"))

@@ -101,6 +101,16 @@ def test_parse_plain_multi_file_diff_splits_files():
     assert p.added_lines(include_tests=False) == ["    return 2", "    x = 2"]
 
 
+def test_parse_patch_hunk_with_wrong_count_ends_at_next_file():
+    p = parse_patch(
+        "--- a/a.py\n+++ b/a.py\n@@ -1 +1,3 @@\n+x = 1\n"
+        "--- a/b.py\n+++ b/b.py\n@@ -1 +1 @@\n+y = 2\n"
+    )
+    assert p.paths == ["a.py", "b.py"]
+    assert [f.added for f in p.files] == [["x = 1"], ["y = 2"]]
+    assert [f.removed for f in p.files] == [[], []]
+
+
 def test_parse_patch_blank_context_line_without_space():
     p = parse_patch("--- a/a.py\n+++ b/a.py\n@@ -1,3 +1,3 @@\n x = 1\n\n-y = 1\n+y = 2\n")
     assert p.files[0].added == ["y = 2"]
