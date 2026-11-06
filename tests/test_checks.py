@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from issuelint.checks import CHECKS, Thresholds, run_checks
 from issuelint.records import TaskRecord
 
@@ -219,3 +221,37 @@ def test_moved_code_quoted_in_a_traceback_is_not_leakage():
     f = run_checks(TaskRecord(id="t", issue=issue, patch=patch)).finding("solution_leakage")
     assert f.metrics["shared_ngrams"] == 0
     assert not f.flagged
+
+
+def test_fail_to_pass_ids_add_test_names():
+    from issuelint.checks import test_names_from_ids
+    from issuelint.records import RecordError, record_from_dict
+
+    ids = [
+        "lib/pkg/tests/test_fig.py::test_invalid_size[0-1]",
+        "tests/test_a.py::TestCase::test_map[2-2]",
+        "test_issue_10228",
+        "test_squash (migrations.test_commands.SquashTests)",
+        "--squashed-name specifies the new migration's name.",
+    ]
+    assert test_names_from_ids(ids) == [
+        "test_invalid_size",
+        "test_map",
+        "test_issue_10228",
+        "test_squash",
+    ]
+    row = {
+        "instance_id": "a",
+        "problem_statement": "test_issue_10228 fails",
+        "patch": "",
+        "FAIL_TO_PASS": '["test_issue_10228"]',
+    }
+    record = record_from_dict(row)
+    assert record.fail_to_pass == ("test_issue_10228",)
+    f = run_checks(record).finding("test_leakage")
+    assert f.score == 1.0
+    assert record_from_dict({**row, "FAIL_TO_PASS": ["test_x"]}).fail_to_pass == ("test_x",)
+    with pytest.raises(RecordError, match="JSON"):
+        record_from_dict({**row, "FAIL_TO_PASS": "not json"})
+    with pytest.raises(RecordError, match="list"):
+        record_from_dict({**row, "FAIL_TO_PASS": "{}"})

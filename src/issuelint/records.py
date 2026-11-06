@@ -25,6 +25,7 @@ ISSUE_KEYS = ("issue", "problem_statement", "issue_text", "text")
 PATCH_KEYS = ("patch", "gold_patch", "fix_patch")
 TEST_PATCH_KEYS = ("test_patch", "tests_patch")
 HINTS_KEYS = ("hints", "hints_text")
+FAIL_TO_PASS_KEYS = ("fail_to_pass", "FAIL_TO_PASS")
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class TaskRecord:
     patch: str
     test_patch: str = ""
     hints: str = ""
+    fail_to_pass: tuple[str, ...] = ()
 
     def issue_text(self, *, with_hints: bool = False) -> str:
         """The text the checks read: the issue, plus the hints when asked for."""
@@ -56,6 +58,20 @@ def _first(row: dict[str, Any], keys: tuple[str, ...]) -> str | None:
     return None
 
 
+def _test_ids(value: Any) -> tuple[str, ...]:
+    """A list of test ids, given as a list or as a JSON-encoded list (the SWE-bench form)."""
+    if value is None or value == "":
+        return ()
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise RecordError(f"FAIL_TO_PASS is not a JSON list: {exc.msg}") from exc
+    if not isinstance(value, list):
+        raise RecordError("FAIL_TO_PASS must be a list of test ids")
+    return tuple(str(v) for v in value)
+
+
 def record_from_dict(row: dict[str, Any], default_id: str | None = None) -> TaskRecord:
     """Build a record from a dictionary in either accepted layout."""
     issue = _first(row, ISSUE_KEYS)
@@ -74,6 +90,7 @@ def record_from_dict(row: dict[str, Any], default_id: str | None = None) -> Task
         patch=patch,
         test_patch=_first(row, TEST_PATCH_KEYS) or "",
         hints=_first(row, HINTS_KEYS) or "",
+        fail_to_pass=_test_ids(next((row[k] for k in FAIL_TO_PASS_KEYS if k in row), None)),
     )
 
 

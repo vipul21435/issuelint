@@ -185,8 +185,28 @@ def _added_test_names(test_patch: ParsedPatch) -> list[str]:
     return list(names)
 
 
+_TEST_ID_NAME_RE = re.compile(r"^(?:test\w*|Test\w*)$")
+
+
+def test_names_from_ids(ids: tuple[str, ...] | list[str]) -> list[str]:
+    """Test function names from test ids such as SWE-bench's FAIL_TO_PASS.
+
+    ``path::Class::test_x[param]`` gives ``test_x``; ``test_x (module.Class)`` gives
+    ``test_x``; ids that are not test names (docstring lines) are skipped.
+    """
+    names: dict[str, None] = {}
+    for test_id in ids:
+        head = test_id.split(" (", 1)[0].split("[", 1)[0]
+        name = head.rsplit("::", 1)[-1].strip()
+        if _TEST_ID_NAME_RE.match(name):
+            names.setdefault(name, None)
+    return list(names)
+
+
 def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Thresholds) -> Finding:
-    names = _added_test_names(test_patch)
+    names = list(
+        dict.fromkeys([*_added_test_names(test_patch), *test_names_from_ids(record.fail_to_pass)])
+    )
     asserts = [line.strip() for line in test_patch.added_lines() if _ASSERT_RE.match(line)]
     issue_words = words(record.issue)
     # Whole assertion lines are matched, so every gram counts here, not only informative ones.
