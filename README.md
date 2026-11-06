@@ -136,7 +136,7 @@ drop issues with external hyperlinks or fewer than 40 words, which is where
 | check | score | default threshold |
 | --- | --- | --- |
 | `solution_leakage` | share of the token n-grams (n = 6) of the gold patch's new code lines that also occur in the issue's code | 0.2 |
-| `test_leakage` | share of (test names + assertion lines) the test patch adds that the issue names (name as a whole word) or contains (every n-gram of the assertion) | 0.34 |
+| `test_leakage` | share of (test names + assertion lines) the test patch adds that the issue names (name as a whole word) or contains (every n-gram of the assertion); test names also come from `FAIL_TO_PASS` when the record has it | 0.34 |
 | `location_hints` | share of (changed non-test files + changed identifiers) the issue names; a file counts when its path, a path suffix or its basename appears | never flagged |
 | `underspecification` | missing signals out of four: a reproduction (a code block or words such as "reproduce", "steps to"), expected-against-actual wording, error text (a traceback, exception or error name), and a length of at least 40 tokens | 0.5 |
 | `external_links` | 1.0 when the issue has links and no code block or error text of its own, 0.5 with links beside its own evidence, 0 without links | 1.0 |
@@ -215,8 +215,8 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
 300 task(s)
   solution_leakage     flagged   16 (  5.3%)  nonzero   24 (  8.0%)  mean score 0.035
                        e.g. django__django-14534, django__django-16255, pytest-dev__pytest-5227
-  test_leakage         flagged    2 (  0.7%)  nonzero    6 (  2.0%)  mean score 0.008
-                       e.g. django__django-15695, pytest-dev__pytest-7373
+  test_leakage         flagged    4 (  1.3%)  nonzero    8 (  2.7%)  mean score 0.012
+                       e.g. sympy__sympy-22005, django__django-13757, django__django-15695
   location_hints       flagged    0 (  0.0%)  nonzero  126 ( 42.0%)  mean score 0.264
                        e.g. django__django-11583, django__django-12453, django__django-13321
   underspecification   flagged  154 ( 51.3%)  nonzero  244 ( 81.3%)  mean score 0.378
@@ -232,7 +232,7 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
 | --- | ---: | ---: | ---: | ---: |
 | `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
 | `solution_leakage`, `--with-hints` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
-| `test_leakage` | 2 (0.7 %) | 5 (1.0 %) | 19 (0.8 %) | 3 (0.5 %) |
+| `test_leakage` | 4 (1.3 %) | 7 (1.4 %) | 25 (1.1 %) | 3 (0.5 %) |
 | `location_hints`, score > 0 | 42.0 % | 51.0 % | 52.4 % | 46.2 % |
 | `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
 | `external_links` | 0 (0.0 %) | 51 (10.2 %) | 313 (13.6 %) | 75 (13.7 %) |
@@ -326,7 +326,9 @@ of leaking instances, so the overlap could not be measured.
   identifier half of `location_hints` see only hunk context headers.
 - `test_leakage` reads test names from `def test_*`, `it("...")`,
   `test("...")`, `fn test_*` and `func Test*`; parametrised or generated
-  tests are missed. It does not read `FAIL_TO_PASS` lists.
+  tests are missed unless the record carries `FAIL_TO_PASS`. SWE-Bench+
+  records have no `FAIL_TO_PASS`, so their test names come from the test
+  patch only.
 - Nothing is executed: no repository checkout, no test run, no check that
   the tests fail before the fix. Images in issues are not looked at.
 - The overlap with the SWE-Bench+ leakage set could not be measured because
