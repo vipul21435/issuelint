@@ -102,15 +102,26 @@ def load_labels(path: str | Path, label: str, id_column: str = "instance_id") ->
     """Read ``id_column`` and the numeric column ``label`` of a CSV; blank labels are skipped.
 
     A UTF-8 byte-order mark (as spreadsheet programs write) is ignored. Labels
-    that are not finite numbers raise ``ValueError``.
+    that are not finite numbers raise ``ValueError``, and so does an id that
+    appears on more than one row (a file with one row per annotator): the
+    labels must be combined into one per task first.
     """
     out: dict[str, float] = {}
+    first_line: dict[str, int] = {}
     with Path(path).open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         missing = {id_column, label} - set(reader.fieldnames or [])
         if missing:
             raise ValueError(f"{path} has no column(s) {sorted(missing)}")
         for row in reader:
+            task_id = row[id_column]
+            if task_id in first_line:
+                raise ValueError(
+                    f"{path}, line {reader.line_num}: id {task_id!r} repeats line "
+                    f"{first_line[task_id]}; give one row per task (combine the "
+                    "annotators' labels first)"
+                )
+            first_line[task_id] = reader.line_num
             value = (row.get(label) or "").strip()
             if value:
                 out[row[id_column]] = _finite(value, f"{path}, line {reader.line_num}")

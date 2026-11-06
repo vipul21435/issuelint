@@ -149,3 +149,13 @@ def test_non_numeric_label_is_named(tmp_path: Path):
     path.write_text("instance_id,l\na,high\n", encoding="utf-8")
     with pytest.raises(ValueError, match="line 2: 'high' is not a number"):
         load_labels(path, "l")
+
+
+def test_repeated_ids_in_labels_are_rejected(tmp_path: Path, capsys):
+    path = tmp_path / "per_annotator.csv"
+    path.write_text("instance_id,l\na,0\nb,3\na,3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"line 4: id 'a' repeats line 2"):
+        load_labels(path, "l")
+    findings, _ = _labelled(tmp_path)
+    assert main(["agree", str(findings), str(path), "--label", "l"]) == 2
+    assert "repeats line 2" in capsys.readouterr().err

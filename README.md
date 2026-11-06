@@ -216,7 +216,8 @@ Details that matter on real issues:
   in "the issue or its comments".
 
 **Agreement with human labels.** `issuelint agree` reads a `check --json`
-file and a CSV with one numeric label per task, marks a task positive when
+file and a CSV with one numeric label per task (an id on two rows, as in a
+file with one row per annotator, exits 2), marks a task positive when
 its label is at least `--positive-at`, and reports for every score and
 count the area under the ROC curve: with `P` positives and `N` negatives
 and `R` the sum of the positives' average ranks among all scores,
