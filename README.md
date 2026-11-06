@@ -296,10 +296,10 @@ replace the reading.
 
 **Comparison with SWE-Bench+.** SWE-Bench+ read the patches SWE-Agent with
 GPT-4 got accepted and reports solution leakage in 18 of 54 resolved Lite
-tasks (33.33 %) and 37 of 112 resolved Verified tasks (33.04 %), counting
-fixes given in the issue or its comments, in code or prose. Those shares
-are over tasks one agent solved, which are likely to be the easier and the
-leakier ones; issuelint's shares are over all tasks and count code overlap
+tasks (33.33 %) and 37 of 112 resolved Verified tasks (33.04 %), counting,
+by manual reading, any fix clearly outlined in the issue or its comments.
+Those shares are over the tasks one agent solved, a set that need not look
+like the whole split; issuelint's shares are over all tasks and count code overlap
 only: 16 of 300 Lite tasks from the issue alone and 30 of 300 with the
 comments. As a share of the whole split, 18 of 300 is 6.0 % against
 issuelint's 5.3 % (issue only) and 10.0 % (with comments), but the two
