@@ -478,3 +478,17 @@ def test_path_suffixes_need_a_boundary():
     assert mentions_path('File "/usr/lib/site/pkg/base.py", line 3', "src/pkg/base.py") == (
         "pkg/base.py"
     )
+
+
+def test_output_that_is_a_directory_or_fails_to_write_exits_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+):
+    assert main(["check", str(SAMPLE), "--quiet", "--json", str(tmp_path)]) == 2
+    assert "is a directory" in capsys.readouterr().err
+
+    def refuse(self: Path, *args: object, **kwargs: object) -> int:
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(Path, "write_text", refuse)
+    assert main(["check", str(SAMPLE), "--quiet", "--csv", str(tmp_path / "o.csv")]) == 2
+    assert "Permission denied" in capsys.readouterr().err

@@ -142,3 +142,10 @@ def test_non_finite_labels_and_scores_are_rejected(tmp_path: Path, value: str):
 def test_auc_rejects_nan_scores():
     with pytest.raises(ValueError, match="finite"):
         auc([float("nan"), 1.0, 0.0, 0.5], [True, False, False, True])
+
+
+def test_non_numeric_label_is_named(tmp_path: Path):
+    path = tmp_path / "l.csv"
+    path.write_text("instance_id,l\na,high\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="line 2: 'high' is not a number"):
+        load_labels(path, "l")

@@ -52,7 +52,7 @@ def _share(text: str) -> float:
 
 def _unwritable(path: Path) -> str | None:
     """Why ``path`` cannot be written, checked before any work is done; None if it can."""
-    parent = path.parent if str(path.parent) else Path()
+    parent = path.parent
     if path.is_dir():
         return "is a directory"
     if not parent.is_dir():

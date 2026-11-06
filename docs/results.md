@@ -4,18 +4,18 @@
 
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
-| `test_leakage` | 6 (2.0 %) | 9 (1.8 %) | 27 (1.2 %) | 5 (0.9 %) |
-| `location_hints` | 42.0 % (score > 0) | 51.0 % (score > 0) | 52.4 % (score > 0) | 46.2 % (score > 0) |
-| `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
-| `external_links` | 0 (0.0 %) | 51 (10.2 %) | 313 (13.6 %) | 75 (13.7 %) |
+| `solution_leakage` | 17 (5.7 %) | 19 (3.8 %) | 52 (2.3 %) | 12 (2.2 %) |
+| `test_leakage` | 3 (1.0 %) | 8 (1.6 %) | 22 (1.0 %) | 2 (0.4 %) |
+| `location_hints` | 41.7 % (score > 0) | 50.6 % (score > 0) | 52.1 % (score > 0) | 45.6 % (score > 0) |
+| `underspecification` | 153 (51.0 %) | 250 (50.0 %) | 1283 (55.9 %) | 218 (39.8 %) |
+| `external_links` | 0 (0.0 %) | 52 (10.4 %) | 314 (13.7 %) | 75 (13.7 %) |
 | `scope_gap` | 222 (74.0 %) | 361 (72.2 %) | 1811 (78.9 %) | 362 (66.1 %) |
 | tasks | 300 | 500 | 2294 | 548 |
 
 Examples (highest-scoring flagged tasks):
 
 - SWE-bench Lite, `solution_leakage`: `django__django-14534`, `django__django-16255`, `pytest-dev__pytest-5227`
-- SWE-bench Lite, `test_leakage`: `django__django-13757`, `sympy__sympy-22005`, `pytest-dev__pytest-7373`
+- SWE-bench Lite, `test_leakage`: `django__django-13757`, `sympy__sympy-22005`, `django__django-15695`
 - SWE-bench Lite, `location_hints`: `django__django-11583`, `django__django-12453`, `django__django-13321`
 - SWE-bench Lite, `underspecification`: `django__django-10914`, `django__django-11039`, `django__django-11099`
 - SWE-bench Lite, `scope_gap`: `astropy__astropy-12907`, `astropy__astropy-14365`, `astropy__astropy-14995`
@@ -32,7 +32,7 @@ Examples (highest-scoring flagged tasks):
 - SWE-bench test, `external_links`: `astropy__astropy-12544`, `astropy__astropy-12891`, `astropy__astropy-13075`
 - SWE-bench test, `scope_gap`: `astropy__astropy-11693`, `astropy__astropy-12057`, `astropy__astropy-12544`
 - SWE-Bench+, `solution_leakage`: `sympy__sympy-26442`, `sympy__sympy-26303`, `pytest-dev__pytest-12492`
-- SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`, `pytest-dev__pytest-12414`
+- SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`
 - SWE-Bench+, `location_hints`: `sympy__sympy-26980`, `sympy__sympy-26954`, `matplotlib__matplotlib-28541`
 - SWE-Bench+, `underspecification`: `astropy__astropy-15751`, `sympy__sympy-26098`, `sympy__sympy-26940`
 - SWE-Bench+, `external_links`: `sympy__sympy-26940`, `sympy__sympy-26935`, `sympy__sympy-26597`
@@ -42,11 +42,11 @@ Examples (highest-scoring flagged tasks):
 
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
-| `test_leakage` | 10 (3.3 %) | 18 (3.6 %) | 46 (2.0 %) | 6 (1.1 %) |
-| `location_hints` | 57.7 % (score > 0) | 62.6 % (score > 0) | 65.0 % (score > 0) | 58.0 % (score > 0) |
-| `underspecification` | 117 (39.0 %) | 220 (44.0 %) | 984 (42.9 %) | 140 (25.5 %) |
-| `external_links` | 15 (5.0 %) | 62 (12.4 %) | 350 (15.3 %) | 63 (11.5 %) |
+| `solution_leakage` | 32 (10.7 %) | 41 (8.2 %) | 126 (5.5 %) | 28 (5.1 %) |
+| `test_leakage` | 7 (2.3 %) | 17 (3.4 %) | 40 (1.7 %) | 3 (0.5 %) |
+| `location_hints` | 57.7 % (score > 0) | 62.2 % (score > 0) | 64.7 % (score > 0) | 56.8 % (score > 0) |
+| `underspecification` | 117 (39.0 %) | 218 (43.6 %) | 981 (42.8 %) | 139 (25.4 %) |
+| `external_links` | 15 (5.0 %) | 63 (12.6 %) | 351 (15.3 %) | 63 (11.5 %) |
 | `scope_gap` | 196 (65.3 %) | 322 (64.4 %) | 1662 (72.4 %) | 331 (60.4 %) |
 | tasks | 300 | 500 | 2294 | 548 |
 
@@ -71,7 +71,7 @@ Examples (highest-scoring flagged tasks):
 - SWE-bench test, `external_links`: `astropy__astropy-12544`, `astropy__astropy-12891`, `astropy__astropy-14371`
 - SWE-bench test, `scope_gap`: `astropy__astropy-11693`, `astropy__astropy-12544`, `astropy__astropy-12907`
 - SWE-Bench+, `solution_leakage`: `matplotlib__matplotlib-28582`, `matplotlib__matplotlib-28487`, `sympy__sympy-26429`
-- SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`, `pytest-dev__pytest-12414`
+- SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`, `sympy__sympy-26429`
 - SWE-Bench+, `location_hints`: `sympy__sympy-26980`, `sympy__sympy-26954`, `sympy__sympy-26919`
 - SWE-Bench+, `underspecification`: `astropy__astropy-15751`, `sympy__sympy-26920`, `sympy__sympy-26683`
 - SWE-Bench+, `external_links`: `sympy__sympy-26597`, `matplotlib__matplotlib-28503`, `matplotlib__matplotlib-28388`
@@ -83,12 +83,12 @@ Label `underspecified >= 2`: 1699 annotated tasks, 650 positive; held-out half: 
 
 | score or metric | AUC, all (95 % interval) | AUC, held-out half | flagged among positives | flagged among negatives |
 | --- | ---: | ---: | ---: | ---: |
-| `underspecification` | 0.568 (0.541 to 0.596) | 0.577 (0.538 to 0.616) | 61.7 % | 52.5 % |
-| `underspecification.has_reproduction` | 0.436 (0.412 to 0.460) | 0.424 (0.391 to 0.456) |  |  |
+| `underspecification` | 0.569 (0.541 to 0.596) | 0.576 (0.538 to 0.615) | 61.5 % | 52.2 % |
+| `underspecification.has_reproduction` | 0.435 (0.411 to 0.459) | 0.425 (0.394 to 0.458) |  |  |
 | `underspecification.has_expected_actual` | 0.451 (0.428 to 0.474) | 0.446 (0.411 to 0.480) |  |  |
 | `underspecification.has_error_text` | 0.496 (0.473 to 0.519) | 0.494 (0.461 to 0.527) |  |  |
 | `underspecification.tokens` | 0.445 (0.415 to 0.473) | 0.445 (0.404 to 0.485) |  |  |
-| `external_links` | 0.517 (0.493 to 0.544) | 0.504 (0.469 to 0.536) | 17.8 % | 10.5 % |
+| `external_links` | 0.517 (0.493 to 0.544) | 0.504 (0.469 to 0.536) | 17.8 % | 10.6 % |
 | `location_hints.identifiers` | 0.558 (0.531 to 0.585) | 0.549 (0.512 to 0.587) |  |  |
 | `solution_leakage.added_ngrams` | 0.597 (0.570 to 0.627) | 0.588 (0.547 to 0.627) |  |  |
 
@@ -99,6 +99,6 @@ Label `false_negative >= 2`: 1699 annotated tasks, 1039 positive; held-out half:
 | `scope_gap` | 0.520 (0.494 to 0.546) | 0.507 (0.470 to 0.543) | 81.9 % | 72.3 % |
 | `scope_gap.unmentioned` | 0.642 (0.614 to 0.667) | 0.645 (0.607 to 0.681) |  |  |
 | `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |  |  |
-| `location_hints` | 0.473 (0.447 to 0.501) | 0.482 (0.447 to 0.518) | 0.0 % | 0.0 % |
-| `test_leakage` | 0.495 (0.488 to 0.502) | 0.495 (0.484 to 0.505) | 0.6 % | 1.7 % |
+| `location_hints` | 0.474 (0.447 to 0.503) | 0.483 (0.447 to 0.519) | 0.0 % | 0.0 % |
+| `test_leakage` | 0.496 (0.490 to 0.501) | 0.494 (0.484 to 0.502) | 0.5 % | 1.4 % |
 | `solution_leakage.added_ngrams` | 0.703 (0.678 to 0.730) | 0.715 (0.680 to 0.751) |  |  |
