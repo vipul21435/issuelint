@@ -82,7 +82,9 @@ also carries the counts behind every score); `--markdown FILE` writes the
 per-check shares with example ids; `--examples N` adds up to N example ids
 per check to the printed summary; `--with-hints` reads the hints together
 with the issue; `--limit N` checks the first N records; `--fail-on-flag`
-exits 1 when any check other than `location_hints` flags a task. Every
+exits 1 when any check other than `location_hints` flags a task; an
+unreadable input file or an out-of-range option exits 2 with a one-line
+error, so CI can tell the two apart. Every
 cut-off is a flag (`--ngram`, `--solution-leakage`, `--test-leakage`,
 `--underspecification`, `--scope-gap`, `--min-issue-tokens`,
 `--max-evidence`); `issuelint check --help` lists the defaults.
