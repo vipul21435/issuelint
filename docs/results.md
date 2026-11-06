@@ -4,7 +4,7 @@
 
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 18 (6.0 %) | 21 (4.2 %) | 66 (2.9 %) | 21 (3.8 %) |
+| `solution_leakage` | 16 (5.3 %) | 18 (3.6 %) | 47 (2.0 %) | 12 (2.2 %) |
 | `test_leakage` | 2 (0.7 %) | 5 (1.0 %) | 19 (0.8 %) | 3 (0.5 %) |
 | `location_hints` | 42.0 % (score > 0) | 51.0 % (score > 0) | 52.4 % (score > 0) | 46.2 % (score > 0) |
 | `underspecification` | 154 (51.3 %) | 253 (50.6 %) | 1288 (56.1 %) | 218 (39.8 %) |
@@ -31,7 +31,7 @@ Examples (highest-scoring flagged tasks):
 - SWE-bench test, `underspecification`: `astropy__astropy-7166`, `django__django-11260`, `django__django-11539`
 - SWE-bench test, `external_links`: `astropy__astropy-12544`, `astropy__astropy-12891`, `astropy__astropy-13075`
 - SWE-bench test, `scope_gap`: `astropy__astropy-11693`, `astropy__astropy-12057`, `astropy__astropy-12544`
-- SWE-Bench+, `solution_leakage`: `matplotlib__matplotlib-27773`, `matplotlib__matplotlib-28030`, `sympy__sympy-26442`
+- SWE-Bench+, `solution_leakage`: `sympy__sympy-26442`, `sympy__sympy-26303`, `pytest-dev__pytest-12492`
 - SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`, `pytest-dev__pytest-12414`
 - SWE-Bench+, `location_hints`: `sympy__sympy-26980`, `sympy__sympy-26954`, `matplotlib__matplotlib-28541`
 - SWE-Bench+, `underspecification`: `astropy__astropy-15751`, `sympy__sympy-26098`, `sympy__sympy-26940`
@@ -42,7 +42,7 @@ Examples (highest-scoring flagged tasks):
 
 | check | SWE-bench Lite | SWE-bench Verified | SWE-bench test | SWE-Bench+ |
 | --- | ---: | ---: | ---: | ---: |
-| `solution_leakage` | 33 (11.0 %) | 44 (8.8 %) | 142 (6.2 %) | 35 (6.4 %) |
+| `solution_leakage` | 30 (10.0 %) | 39 (7.8 %) | 120 (5.2 %) | 28 (5.1 %) |
 | `test_leakage` | 6 (2.0 %) | 14 (2.8 %) | 35 (1.5 %) | 4 (0.7 %) |
 | `location_hints` | 57.7 % (score > 0) | 62.6 % (score > 0) | 65.0 % (score > 0) | 58.0 % (score > 0) |
 | `underspecification` | 117 (39.0 %) | 220 (44.0 %) | 984 (42.9 %) | 140 (25.5 %) |
@@ -70,7 +70,7 @@ Examples (highest-scoring flagged tasks):
 - SWE-bench test, `underspecification`: `django__django-11260`, `django__django-11539`, `django__django-12748`
 - SWE-bench test, `external_links`: `astropy__astropy-12544`, `astropy__astropy-12891`, `astropy__astropy-14371`
 - SWE-bench test, `scope_gap`: `astropy__astropy-11693`, `astropy__astropy-12544`, `astropy__astropy-12907`
-- SWE-Bench+, `solution_leakage`: `matplotlib__matplotlib-28582`, `matplotlib__matplotlib-28487`, `sympy__sympy-26122`
+- SWE-Bench+, `solution_leakage`: `matplotlib__matplotlib-28582`, `matplotlib__matplotlib-28487`, `sympy__sympy-26429`
 - SWE-Bench+, `test_leakage`: `pylint-dev__pylint-9867`, `pylint-dev__pylint-9866`, `pytest-dev__pytest-12414`
 - SWE-Bench+, `location_hints`: `sympy__sympy-26980`, `sympy__sympy-26954`, `sympy__sympy-26919`
 - SWE-Bench+, `underspecification`: `astropy__astropy-15751`, `sympy__sympy-26920`, `sympy__sympy-26683`
@@ -99,4 +99,4 @@ Label `false_negative >= 2`: 1699 annotated tasks, 1039 positive; held-out half:
 | `scope_gap.tests_use_new_names` | 0.679 (0.657 to 0.702) | 0.681 (0.648 to 0.712) |  |  |
 | `location_hints` | 0.473 (0.447 to 0.501) | 0.482 (0.447 to 0.518) | 0.0 % | 0.0 % |
 | `test_leakage` | 0.495 (0.488 to 0.501) | 0.494 (0.483 to 0.505) | 0.4 % | 1.1 % |
-| `solution_leakage.added_ngrams` | 0.703 (0.679 to 0.728) | 0.713 (0.677 to 0.748) |  |  |
+| `solution_leakage.added_ngrams` | 0.703 (0.678 to 0.730) | 0.715 (0.680 to 0.751) |  |  |
