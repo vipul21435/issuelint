@@ -6,6 +6,7 @@ import pytest
 
 from issuelint.checks import CHECKS, Thresholds, run_checks
 from issuelint.records import TaskRecord
+from issuelint.text import code_blocks
 
 PATCH = """diff --git a/src/units/convert.py b/src/units/convert.py
 --- a/src/units/convert.py
@@ -485,3 +486,34 @@ def test_public_names_are_not_collected_by_pytest():
     public = [n for n in dir(checks) if not n.startswith("_") and callable(getattr(checks, n))]
     assert "names_from_test_ids" in public
     assert [n for n in public if n.startswith("test")] == []
+
+
+FIX_LINES = [
+    '    if unit == "K":',
+    "        return value - 273.15",
+    '    if unit == "C":',
+    "        return value",
+]
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "```diff\n" + "".join(f"+{line}\n" for line in FIX_LINES) + "```\n",
+        "```patch\n" + "".join(f"+{line}\n" for line in FIX_LINES) + "```\n",
+        "```\n@@ -10,6 +10,9 @@\n" + "".join(f"+{line}\n" for line in FIX_LINES) + "```\n",
+    ],
+    ids=["diff-fence", "patch-fence", "hunk-header"],
+)
+def test_a_fenced_diff_scores_as_the_same_code_without_prefixes(block: str):
+    plain = "Fix:\n```python\n" + "\n".join(FIX_LINES) + "\n```\n"
+    as_code = run_checks(TaskRecord(id="t", issue=plain, patch=PATCH)).finding("solution_leakage")
+    as_diff = run_checks(TaskRecord(id="t", issue="Fix:\n" + block, patch=PATCH))
+    assert as_code.score == 1.0
+    assert as_diff.finding("solution_leakage").score == as_code.score
+
+
+def test_a_fenced_diff_drops_removed_lines_and_keeps_other_lines():
+    issue = "```diff\n--- a/x.py\n+++ b/x.py\n-old_call()\n+new_call()\n same()\nnote here\n```"
+    assert code_blocks(issue) == ["new_call()\nsame()\nnote here"]
+    assert code_blocks("```python\n+x\n-y\n```") == ["+x\n-y"]

@@ -16,25 +16,19 @@ _COMMENT_RE = re.compile(r"^\s*(?:#|//|/\*|\*)")
 _DIFF_START_RE = re.compile(r"^(?:diff --git |@@ -\d)")
 
 
-def split_fences(issue: str) -> tuple[list[str], list[str]]:
-    """Fenced block contents, and the lines outside fences.
-
-    A fence opens on a line that starts (after up to three spaces) with three or
-    more backticks or tildes; a backtick opener whose info string holds a
-    backtick is a code span, not a fence. The block ends at the first line that
-    holds the same marker, and text before the marker on that line belongs to
-    the block. An unclosed fence runs to the end of the text, as GitHub renders
-    it. One pass over the lines, so the time is linear in the text length.
-    """
-    blocks: list[str] = []
+def _fenced(issue: str) -> tuple[list[tuple[str, str]], list[str]]:
+    """Fenced blocks as (info string word, contents), and the lines outside fences."""
+    blocks: list[tuple[str, str]] = []
     outside: list[str] = []
     current: list[str] | None = None
-    marker = ""
+    marker = info = ""
     for line in issue.splitlines():
         if current is None:
             match = _FENCE_OPEN_RE.match(line)
             if match and not (match.group(1)[0] == "`" and "`" in line[match.end() :]):
                 marker = match.group(1)
+                words_after = line[match.end() :].split()
+                info = words_after[0].lower() if words_after else ""
                 current = []
             else:
                 outside.append(line)
@@ -45,12 +39,26 @@ def split_fences(issue: str) -> tuple[list[str], list[str]]:
             continue
         if line[:at].strip():
             current.append(line[:at])
-        blocks.append("\n".join(current))
+        blocks.append((info, "\n".join(current)))
         current = None
         outside.append(line[at + len(marker) :].lstrip(marker[0]))
     if current is not None:
-        blocks.append("\n".join(current))
+        blocks.append((info, "\n".join(current)))
     return blocks, outside
+
+
+def split_fences(issue: str) -> tuple[list[str], list[str]]:
+    """Fenced block contents, and the lines outside fences.
+
+    A fence opens on a line that starts (after up to three spaces) with three or
+    more backticks or tildes; a backtick opener whose info string holds a
+    backtick is a code span, not a fence. The block ends at the first line that
+    holds the same marker, and text before the marker on that line belongs to
+    the block. An unclosed fence runs to the end of the text, as GitHub renders
+    it. One pass over the lines, so the time is linear in the text length.
+    """
+    blocks, outside = _fenced(issue)
+    return [body for _, body in blocks], outside
 
 
 def _diff_blocks(lines: list[str]) -> tuple[list[str], list[str]]:
@@ -74,34 +82,66 @@ def _diff_blocks(lines: list[str]) -> tuple[list[str], list[str]]:
             rest.append(line)
             i += 1
             continue
-        kept: list[str] = []
-        while i < len(lines):
-            line = lines[i]
-            if line.startswith(("diff --git ", "index ", "--- ", "+++ ", "@@", "-", "\\")):
-                pass
-            elif line.startswith(("+", " ")):
-                kept.append(line[1:])
-            elif line.startswith("\t"):
-                # Context whose leading space was turned into a tab on the way
-                # into the tracker (seen in Trac tickets).
-                kept.append(line)
-            elif not line.strip():
-                kept.append("")
-            else:
-                break
-            i += 1
+        kept, i = _diff_body(lines, i)
         if any(k.strip() for k in kept):
             blocks.append("\n".join(kept))
     return blocks, rest
 
 
+def _diff_body(lines: list[str], i: int) -> tuple[list[str], int]:
+    """The code a diff starting at ``lines[i]`` leaves behind, and the index after it."""
+    kept: list[str] = []
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith(("diff --git ", "index ", "--- ", "+++ ", "@@", "-", "\\")):
+            pass
+        elif line.startswith(("+", " ")):
+            kept.append(line[1:])
+        elif line.startswith("\t"):
+            # Context whose leading space was turned into a tab on the way
+            # into the tracker (seen in Trac tickets).
+            kept.append(line)
+        elif not line.strip():
+            kept.append("")
+        else:
+            break
+        i += 1
+    return kept, i
+
+
+def _fenced_code(info: str, body: str) -> str:
+    """A fenced block's code; a diff loses its prefixes as an unfenced one does.
+
+    A block is a diff when its info string is ``diff`` or ``patch`` or when it
+    holds a ``diff --git`` or ``@@ -N`` line. Lines of a fenced diff that are
+    not diff lines are kept as they are.
+    """
+    lines = body.splitlines()
+    if info not in ("diff", "patch") and not any(_DIFF_START_RE.match(line) for line in lines):
+        return body
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        kept, j = _diff_body(lines, i)
+        if j == i:
+            out.append(lines[i])
+            i += 1
+        else:
+            out.extend(kept)
+            i = j
+    return "\n".join(out)
+
+
 def code_blocks(issue: str) -> list[str]:
     """Code in an issue: fenced blocks, unfenced diffs, then indented blocks.
 
-    Indented blocks are runs of two or more lines starting with four spaces or a
-    tab, outside fences and diffs.
+    Diffs, fenced or not, keep their context and added lines without the
+    one-character prefix and lose removed lines and headers. Indented blocks
+    are runs of two or more lines starting with four spaces or a tab, outside
+    fences and diffs.
     """
-    blocks, outside = split_fences(issue)
+    fenced, outside = _fenced(issue)
+    blocks = [_fenced_code(info, body) for info, body in fenced]
     diffs, rest = _diff_blocks(outside)
     blocks.extend(diffs)
     current: list[str] = []

@@ -144,7 +144,8 @@ count as test files. Issue code is the content of fenced blocks (backticks or
 tildes; an unclosed fence runs to the end of the text, as GitHub renders
 it), unfenced unified diffs (from a `diff --git`, `--- `/`+++ ` or `@@ -N`
 header; context and added lines kept without their prefix, removed lines
-dropped), indented blocks of two or more lines, and single-backtick spans.
+dropped; a fenced block is read the same way when its info string is
+`diff` or `patch` or it holds a `diff --git` or `@@ -N` line), indented blocks of two or more lines, and single-backtick spans.
 Fences are found line by line, so the time is linear in the issue length. Tokens are
 identifiers, numbers and punctuation with whitespace dropped and single and
 double quotes merged, so reformatting does not break a match.
@@ -426,8 +427,9 @@ of leaking instances, so the overlap could not be measured.
   (more than four columns deeper than the file's shallowest added test
   definition); a test patch that adds only a nested definition, without
   its enclosing test, still counts it. Python is not parsed.
-- Diffs inside a code fence keep their `+`, `-` and space prefixes as
-  tokens; only unfenced diffs are stripped of them.
+- A diff inside a fence with another info string (or none) and without a
+  `diff --git` or `@@ -N` line keeps its `+`, `-` and space prefixes as
+  tokens, which breaks the n-grams that cross its lines.
 - Nothing is executed: no repository checkout, no test run, no check that
   the tests fail before the fix. Images in issues are not looked at.
 - The overlap with the SWE-Bench+ leakage set could not be measured because
