@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from issuelint import __version__
@@ -11,6 +12,21 @@ from issuelint.agreement import agreement, format_agreement, load_findings, load
 from issuelint.checks import Thresholds, run_all
 from issuelint.records import RecordError, load_records
 from issuelint.report import explain, summary, table, to_csv, to_json, to_markdown
+
+
+def _count(minimum: int) -> Callable[[str], int]:
+    """An argparse type for whole numbers of at least ``minimum`` (bad values exit 2)."""
+
+    def parse(text: str) -> int:
+        try:
+            value = int(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"expected a whole number, got {text!r}") from None
+        if value < minimum:
+            raise argparse.ArgumentTypeError(f"must be at least {minimum}, got {value}")
+        return value
+
+    return parse
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     check = sub.add_parser("check", help="run every check on a JSONL or JSON file of records")
     check.add_argument("input", type=Path, help=".jsonl, .json or .parquet file of task records")
-    check.add_argument("--limit", type=int, help="check only the first N records")
+    check.add_argument("--limit", type=_count(0), help="check only the first N records")
     check.add_argument(
         "--with-hints",
         action="store_true",
@@ -41,7 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument(
         "--examples",
-        type=int,
+        type=_count(0),
         default=0,
         metavar="N",
         help="list up to N example ids per check in the summary (0)",
@@ -53,7 +69,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="exit 1 when any task is flagged by a check other than location_hints",
     )
     d = Thresholds()
-    check.add_argument("--ngram", type=int, default=d.ngram, help=f"token n-gram size ({d.ngram})")
+    check.add_argument(
+        "--ngram", type=_count(1), default=d.ngram, help=f"token n-gram size ({d.ngram})"
+    )
     check.add_argument(
         "--solution-leakage",
         type=float,
@@ -80,13 +98,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument(
         "--min-issue-tokens",
-        type=int,
+        type=_count(0),
         default=d.min_issue_tokens,
         help=f"an issue with fewer tokens counts as short ({d.min_issue_tokens})",
     )
     check.add_argument(
         "--max-evidence",
-        type=int,
+        type=_count(0),
         default=d.max_evidence,
         help=f"evidence lines kept per finding ({d.max_evidence})",
     )
@@ -103,7 +121,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="a task is positive when its label is at least this (1)",
     )
     agree.add_argument("--id-column", default="instance_id", help="id column (instance_id)")
-    agree.add_argument("--resamples", type=int, default=1000, help="bootstrap resamples (1000)")
+    agree.add_argument(
+        "--resamples", type=_count(1), default=1000, help="bootstrap resamples (1000)"
+    )
     agree.add_argument("--seed", type=int, default=0, help="bootstrap seed (0)")
     return parser
 

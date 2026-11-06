@@ -117,9 +117,17 @@ def load_jsonl(path: str | Path) -> list[TaskRecord]:
 
 def load_json(path: str | Path) -> list[TaskRecord]:
     """Read a JSON file holding one record or a list of records."""
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RecordError(f"{path}: not JSON ({exc.msg}, line {exc.lineno})") from exc
     rows = data if isinstance(data, list) else [data]
-    return [record_from_dict(row, default_id=f"row-{i}") for i, row in enumerate(rows, start=1)]
+    records = []
+    for i, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise RecordError(f"record {i}: expected an object, got {type(row).__name__}")
+        records.append(record_from_dict(row, default_id=f"row-{i}"))
+    return records
 
 
 def load_parquet(path: str | Path) -> list[TaskRecord]:

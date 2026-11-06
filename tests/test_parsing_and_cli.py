@@ -310,3 +310,35 @@ def test_explain_flagged_only(capsys):
     out = capsys.readouterr().out
     assert "leaky-solution" in out
     assert "\nclean-1\n" not in out
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [("{not json", "not JSON"), ("[1, 2]", "expected an object, got int")],
+)
+def test_bad_json_files_exit_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], content: str, message: str
+):
+    path = tmp_path / "bad.json"
+    path.write_text(content, encoding="utf-8")
+    with pytest.raises(RecordError, match=message):
+        load_records(path)
+    assert main(["check", str(path), "--quiet"]) == 2
+    assert message in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--ngram", "0"],
+        ["--limit", "-1"],
+        ["--examples", "-2"],
+        ["--max-evidence", "-1"],
+        ["--min-issue-tokens", "x"],
+    ],
+)
+def test_out_of_range_counts_exit_2(capsys: pytest.CaptureFixture[str], flags: list[str]):
+    with pytest.raises(SystemExit) as exc:
+        main(["check", str(SAMPLE), "--quiet", *flags])
+    assert exc.value.code == 2
+    assert flags[0] in capsys.readouterr().err
