@@ -103,27 +103,80 @@ section below.
 
 ## How it works
 
-The gold patch and the test patch are parsed as unified diffs into files,
-added lines, removed lines and hunk context headers. Paths under `tests/`,
-`test/`, `__tests__/`, `spec/` or named `test_*`, `*_test.*`, `*.test.*`,
-`*.spec.*` count as test files. Issue code is the content of fenced blocks,
-indented blocks of two or more lines, and single-backtick spans. Tokens are
-identifiers, numbers and punctuation with whitespace dropped, so formatting
-differences do not break a match.
+Each check lines the issue text up against the gold patch or the test patch
+and returns a score in [0, 1], a flag (`score >= threshold`), the counts
+behind the score and evidence lines. Nothing is learned; every rule is below.
 
-Every score is a ratio in [0, 1] and the flag is `score >= threshold`:
+**Parsing.** Patches are parsed as unified diffs into files, added lines,
+removed lines and hunk context headers. Paths under `tests/`, `test/`,
+`__tests__/`, `spec/` or named `test_*`, `*_test.*`, `*.test.*`, `*.spec.*`
+count as test files. Issue code is the content of fenced blocks, indented
+blocks of two or more lines, and single-backtick spans. Tokens are
+identifiers, numbers and punctuation with whitespace dropped and single and
+double quotes merged, so reformatting does not break a match.
+
+**Why these six.** The SWE-bench paper (Jimenez et al., "SWE-bench: Can
+Language Models Resolve Real-World GitHub Issues?", ICLR 2024,
+[arXiv 2310.06770](https://arxiv.org/abs/2310.06770)) builds tasks from an
+issue, the fix in the linked pull request and the tests that pull request
+adds; every check here reads one pair out of those three texts. The SWE-bench
+Verified annotation instructions (published by OpenAI with SWE-bench
+Verified, [PDF](https://cdn.openai.com/introducing-swe-bench-verified/swe-b-annotation-instructions.pdf))
+ask annotators whether the issue is well specified "without further
+information", tell them not to follow external links, and name tests that
+rely on "a new function, variable name, or error message" introduced by the
+gold patch and absent from the issue as the most common test problem.
+SWE-Bench+ (Aleithan et al., "SWE-Bench+: Enhanced Coding Benchmark for
+LLMs", [arXiv 2410.06992](https://arxiv.org/abs/2410.06992)) defines
+solution leakage as the fix being given in the issue or its comments. The
+SWE-bench Lite filters ([swebench.com/lite](https://www.swebench.com/lite.html))
+drop issues with external hyperlinks or fewer than 40 words, which is where
+`external_links` and the default `--min-issue-tokens 40` come from.
 
 | check | score | default threshold |
 | --- | --- | --- |
-| `solution_leakage` | share of the token n-grams (n = 6) of the gold patch's added non-test code lines that also occur in the issue's code; evidence lists added lines whose every n-gram is in the issue | 0.2 |
+| `solution_leakage` | share of the token n-grams (n = 6) of the gold patch's new code lines that also occur in the issue's code | 0.2 |
 | `test_leakage` | share of (test names + assertion lines) the test patch adds that the issue names (name as a whole word) or contains (every n-gram of the assertion) | 0.34 |
 | `location_hints` | share of (changed non-test files + changed identifiers) the issue names; a file counts when its path, a path suffix or its basename appears | never flagged |
-| `underspecification` | missing signals out of four: a reproduction (a code block or words such as "reproduce", "steps to"), expected-against-actual wording, error text (a traceback, exception or error name), and length of at least 40 tokens | 0.5 |
+| `underspecification` | missing signals out of four: a reproduction (a code block or words such as "reproduce", "steps to"), expected-against-actual wording, error text (a traceback, exception or error name), and a length of at least 40 tokens | 0.5 |
 | `external_links` | 1.0 when the issue has links and no code block or error text of its own, 0.5 with links beside its own evidence, 0 without links | 1.0 |
 | `scope_gap` | share of identifiers the gold patch changes (hunk context definitions plus added or removed `def`, `class`, `function`, `fn`, `struct`, `func` and similar lines in non-test files) that the issue never mentions | 0.5 |
 
-Comment lines and blank lines are dropped before n-grams are built, and
-patches that add less than one n-gram score 0 rather than raising.
+Details that matter on real issues:
+
+- *Solution leakage* counts only new code. Comment and blank lines are
+  dropped; an added line whose tokens equal a removed line's (moved or
+  re-indented code) is dropped; n-grams in which fewer than half of the
+  tokens are identifiers (`) ) , 0 ] )`) are dropped. On the issue side, the
+  source lines a traceback quotes (the line after `File "...", line N`,
+  IPython's numbered lines, pytest's `>` lines) are dropped, because they
+  show the code before the fix. With `S` the n-grams of the new code and `I`
+  those of the issue's code, the score is `|{g in S : g in I}| / |S|`, with
+  repeats in `S` counted.
+- *Test leakage* matches whole assertion lines, so all n-grams of an
+  assertion must occur in the issue, not only the identifier-heavy ones.
+- *Scope gap* also reports, without changing its score,
+  `tests_use_new_names`: identifiers (three characters or more) on the gold
+  patch's added code lines and on none of its removed lines, used on the
+  test patch's added lines, and absent from the issue. This is the test
+  problem the Verified instructions describe.
+- *Location hints* are reported and never flagged: naming the file or the
+  function is normal in a good bug report, but it is worth knowing how much
+  of the search the issue already did.
+- `--with-hints` appends SWE-bench's `hints_text` (issue comments made before
+  the fix) to the issue, which matches the SWE-Bench+ definition of leakage
+  in "the issue or its comments".
+
+**Agreement with human labels.** `issuelint agree` reads a `check --json`
+file and a CSV with one numeric label per task, marks a task positive when
+its label is at least `--positive-at`, and reports for every score and
+count the area under the ROC curve: with `P` positives and `N` negatives
+and `R` the sum of the positives' average ranks among all scores,
+`AUC = (R - P(P + 1)/2) / (P N)`, the chance that a random positive scores
+above a random negative (ties count one half; 0.5 is chance). The 95 %
+interval is a percentile bootstrap over tasks (1000 resamples, seed 0). For
+flagging checks it also prints the share flagged among positives and among
+negatives.
 
 ## Results on real public data
 
