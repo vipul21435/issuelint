@@ -338,8 +338,6 @@ of leaking instances, so the overlap could not be measured.
 - [reporewind](https://github.com/vipul21435/reporewind): resolve Python fix commits into source and test patches, the input issuelint reads.
 - [taskledger](https://github.com/vipul21435/taskledger): schema validation and lint rules for benchmark-task bundles.
 - [graderguard](https://github.com/vipul21435/graderguard): audit graders for reward hacking and flakiness.
-- [patchmin](https://github.com/vipul21435/patchmin): minimal patches for issue-to-fix tasks.
-- [evalstats](https://github.com/vipul21435/evalstats): statistics for comparing evaluation runs.
 
 ## Licence
 
