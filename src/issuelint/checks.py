@@ -27,6 +27,7 @@ from issuelint.records import TaskRecord
 from issuelint.text import (
     code_blocks,
     code_lines,
+    code_ngrams,
     inline_code,
     mentions,
     mentions_path,
@@ -136,15 +137,15 @@ def _issue_code_text(issue: str) -> str:
 def check_solution_leakage(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Finding:
     added = code_lines(patch.added_lines(include_tests=False))
     added_tokens = tokens("\n".join(added))
-    patch_grams = ngrams(added_tokens, t.ngram)
-    issue_grams = set(ngrams(tokens(_issue_code_text(record.issue)), t.ngram))
+    patch_grams = code_ngrams(added_tokens, t.ngram)
+    issue_grams = set(code_ngrams(tokens(_issue_code_text(record.issue)), t.ngram))
     if not patch_grams:
         return Finding("solution_leakage", 0.0, False, "no added code of at least one n-gram")
     hits = [g for g in patch_grams if g in issue_grams]
     score = len(hits) / len(patch_grams)
     evidence: list[str] = []
     for line in added:
-        grams = ngrams(tokens(line), t.ngram)
+        grams = code_ngrams(tokens(line), t.ngram)
         if grams and all(g in issue_grams for g in grams):
             evidence.append(f"added line present in issue code: {line.strip()}")
     summary = (
@@ -174,6 +175,7 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
     names = _added_test_names(test_patch)
     asserts = [line.strip() for line in test_patch.added_lines() if _ASSERT_RE.match(line)]
     issue_words = words(record.issue)
+    # Whole assertion lines are matched, so every gram counts here, not only informative ones.
     issue_grams = set(ngrams(tokens(record.issue), t.ngram))
     evidence: list[str] = []
     hit = 0

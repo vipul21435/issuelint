@@ -43,8 +43,26 @@ def urls(issue: str) -> list[str]:
 
 
 def tokens(text: str) -> list[str]:
-    """Code tokens: identifiers, numbers and punctuation; whitespace dropped."""
-    return _TOKEN_RE.findall(text)
+    """Code tokens: identifiers, numbers and punctuation; whitespace dropped.
+
+    Single and double quotes become one token so that ``'a'`` and ``"a"`` match.
+    """
+    return ['"' if tok == "'" else tok for tok in _TOKEN_RE.findall(text)]
+
+
+def informative(gram: tuple[str, ...]) -> bool:
+    """Whether at least half of a gram's tokens are identifiers.
+
+    Grams made mostly of punctuation and numbers (``) ) ) , 0 ]``, table rules,
+    closing brackets) occur in unrelated code and would count as shared code.
+    """
+    idents = sum(1 for tok in gram if tok[0].isalpha() or tok[0] == "_")
+    return 2 * idents >= len(gram)
+
+
+def code_ngrams(items: list[str], n: int) -> list[tuple[str, ...]]:
+    """The informative n-grams of a token list, in order, repeats kept."""
+    return [g for g in ngrams(items, n) if informative(g)]
 
 
 def words(text: str) -> set[str]:

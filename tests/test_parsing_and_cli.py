@@ -199,3 +199,12 @@ def test_duplicate_ids_are_rejected(tmp_path: Path):
     path.write_text(f"{row}\n{row}\n", encoding="utf-8")
     with pytest.raises(RecordError, match="duplicate"):
         load_records(path)
+
+
+def test_quotes_are_one_token_and_punctuation_grams_are_dropped():
+    from issuelint.text import code_ngrams, informative
+
+    assert tokens("f('a')") == tokens('f("a")')
+    assert not informative((")", ")", ",", "0", "]", ")"))
+    assert informative(("x", ".", "y", "(", "z", ")"))
+    assert code_ngrams(tokens(") ) ) ] ] ]"), 3) == []
