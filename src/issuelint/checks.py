@@ -65,6 +65,7 @@ class Finding:
     flagged: bool
     summary: str
     evidence: list[str] = field(default_factory=list)
+    metrics: dict[str, int | float] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -73,6 +74,7 @@ class Finding:
             "flagged": self.flagged,
             "summary": self.summary,
             "evidence": list(self.evidence),
+            "metrics": dict(self.metrics),
         }
 
 
@@ -157,6 +159,11 @@ def check_solution_leakage(record: TaskRecord, patch: ParsedPatch, t: Thresholds
         score >= t.solution_leakage,
         summary,
         _cap(evidence, t.max_evidence),
+        {
+            "shared_ngrams": len(hits),
+            "added_ngrams": len(patch_grams),
+            "lines_in_issue": len(evidence),
+        },
     )
 
 
@@ -197,7 +204,12 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
         "already in the issue"
     )
     return Finding(
-        "test_leakage", score, score >= t.test_leakage, summary, _cap(evidence, t.max_evidence)
+        "test_leakage",
+        score,
+        score >= t.test_leakage,
+        summary,
+        _cap(evidence, t.max_evidence),
+        {"hits": hit, "test_names": len(names), "assertions": len(asserts)},
     )
 
 
@@ -221,7 +233,14 @@ def check_location_hints(record: TaskRecord, patch: ParsedPatch, t: Thresholds) 
         return Finding("location_hints", 0.0, False, "patch changes no non-test files")
     score = hit / total
     summary = f"{hit} of {total} ({len(paths)} files, {len(idents)} identifiers) named in the issue"
-    return Finding("location_hints", score, False, summary, _cap(evidence, t.max_evidence))
+    return Finding(
+        "location_hints",
+        score,
+        False,
+        summary,
+        _cap(evidence, t.max_evidence),
+        {"hits": hit, "files": len(paths), "identifiers": len(idents)},
+    )
 
 
 def check_underspecification(record: TaskRecord, _patch: ParsedPatch, t: Thresholds) -> Finding:
@@ -242,7 +261,15 @@ def check_underspecification(record: TaskRecord, _patch: ParsedPatch, t: Thresho
         missing.append(f"short: {length} tokens, below {t.min_issue_tokens}")
     score = len(missing) / 4
     summary = f"{len(missing)} of 4 specification signals missing"
-    return Finding("underspecification", score, score >= t.underspecification, summary, missing)
+    metrics: dict[str, int | float] = {
+        "has_reproduction": int(has_repro),
+        "has_expected_actual": int(has_expected),
+        "has_error_text": int(has_error),
+        "tokens": length,
+    }
+    return Finding(
+        "underspecification", score, score >= t.underspecification, summary, missing, metrics
+    )
 
 
 def check_external_links(record: TaskRecord, _patch: ParsedPatch, t: Thresholds) -> Finding:
@@ -262,6 +289,7 @@ def check_external_links(record: TaskRecord, _patch: ParsedPatch, t: Thresholds)
         score >= 1.0,
         summary,
         _cap([f"link: {u}" for u in links], t.max_evidence),
+        {"links": len(links), "own_evidence": int(own_evidence)},
     )
 
 
@@ -277,7 +305,12 @@ def check_scope_gap(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Fi
     )
     evidence = [f"changed but not mentioned: {name}" for name in unmentioned]
     return Finding(
-        "scope_gap", score, score >= t.scope_gap, summary, _cap(evidence, t.max_evidence)
+        "scope_gap",
+        score,
+        score >= t.scope_gap,
+        summary,
+        _cap(evidence, t.max_evidence),
+        {"unmentioned": len(unmentioned), "identifiers": len(idents)},
     )
 
 

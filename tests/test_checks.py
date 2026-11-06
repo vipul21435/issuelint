@@ -164,3 +164,13 @@ def test_report_dict_shape():
     assert d["flags"] == []
     assert {f["check"] for f in d["findings"]} == set(CHECKS)
     assert all({"score", "flagged", "summary", "evidence"} <= set(f) for f in d["findings"])
+
+
+def test_findings_carry_counts_in_metrics():
+    report = run_checks(_record(GOOD_ISSUE))
+    for f in report.findings:
+        assert "metrics" in f.as_dict()
+    under = report.finding("underspecification").metrics
+    assert set(under) == {"has_reproduction", "has_expected_actual", "has_error_text", "tokens"}
+    sol = report.finding("solution_leakage").metrics
+    assert sol["shared_ngrams"] <= sol["added_ngrams"]
