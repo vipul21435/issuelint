@@ -214,7 +214,9 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
     evidence: list[str] = []
     hit = 0
     for name in names:
-        if name in record.issue or mentions(issue_words, name):
+        # Identifier names must appear as a whole word; titles such as it("renders
+        # the header") contain spaces and are matched as a phrase.
+        if mentions(issue_words, name) or (" " in name and name in record.issue):
             hit += 1
             evidence.append(f"issue names the added test: {name}")
     for line in asserts:

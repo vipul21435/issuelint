@@ -255,3 +255,20 @@ def test_fail_to_pass_ids_add_test_names():
         record_from_dict({**row, "FAIL_TO_PASS": "not json"})
     with pytest.raises(RecordError, match="list"):
         record_from_dict({**row, "FAIL_TO_PASS": "{}"})
+
+
+def test_test_names_match_whole_words_and_title_phrases():
+    from issuelint.records import TaskRecord
+
+    test_patch = (
+        "--- a/tests/test_a.py\n+++ b/tests/test_a.py\n@@ -1 +1,3 @@\n"
+        "+def test_map():\n+    pass\n"
+        "--- a/web/a.test.js\n+++ b/web/a.test.js\n@@ -1 +1,2 @@\n"
+        "+it('renders the header', () => {});\n"
+    )
+    record = TaskRecord(id="t", issue="test_mapping fails", patch="", test_patch=test_patch)
+    assert run_checks(record).finding("test_leakage").score == 0.0
+    record = TaskRecord(
+        id="t", issue="it no longer renders the header", patch="", test_patch=test_patch
+    )
+    assert run_checks(record).finding("test_leakage").score == 0.5
