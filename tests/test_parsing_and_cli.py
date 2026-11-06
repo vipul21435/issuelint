@@ -465,3 +465,16 @@ def test_agree_positive_at_must_be_finite(
         main(["agree", "f.json", "l.csv", "--label", "l", "--positive-at", value])
     assert exc.value.code == 2
     assert "--positive-at" in capsys.readouterr().err
+
+
+def test_path_suffixes_need_a_boundary():
+    assert mentions_path("Running my database.py script fails", "pkg/base.py") is None
+    assert mentions_path("see tests/test_translation.py", "core/checks/translation.py") is None
+    assert mentions_path("broken in checks/translation.py:12", "core/checks/translation.py") == (
+        "checks/translation.py"
+    )
+    assert mentions_path("(base.py) fails", "pkg/base.py") == "base.py"
+    assert mentions_path("open pkg/base.py.", "src/pkg/base.py") == "pkg/base.py"
+    assert mentions_path('File "/usr/lib/site/pkg/base.py", line 3', "src/pkg/base.py") == (
+        "pkg/base.py"
+    )

@@ -201,12 +201,16 @@ def mentions(issue_words: set[str], name: str) -> bool:
 
 
 def mentions_path(issue: str, path: str) -> str | None:
-    """The form in which a file path is mentioned: the full path, a suffix, or its basename."""
-    if path in issue:
-        return path
+    """The form in which a file path is mentioned: the full path, a suffix, or its basename.
+
+    A form counts only as a whole name: not preceded by a word character or
+    ``-`` (so ``base.py`` is not found in ``database.py`` or ``test_base.py``)
+    and not followed by a word character. A leading ``/`` is allowed, so the
+    tail of an absolute path in a traceback counts.
+    """
     parts = path.split("/")
-    for start in range(1, len(parts)):
-        suffix = "/".join(parts[start:])
-        if suffix in issue:
-            return suffix
+    for start in range(len(parts)):
+        form = "/".join(parts[start:])
+        if re.search(r"(?<![\w-])" + re.escape(form) + r"(?!\w)", issue):
+            return form
     return None
