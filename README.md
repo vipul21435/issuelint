@@ -132,7 +132,20 @@ LLMs", [arXiv 2410.06992](https://arxiv.org/abs/2410.06992)) defines
 solution leakage as the fix being given in the issue or its comments. The
 SWE-bench Lite filters ([swebench.com/lite](https://www.swebench.com/lite.html))
 drop issues with external hyperlinks or fewer than 40 words, which is where
-`external_links` and the default `--min-issue-tokens 40` come from.
+`external_links` and the number in the default `--min-issue-tokens 40` come
+from. The check counts code tokens (punctuation, numbers and operators each
+count), not words, so it is looser than the Lite rule: on the SWE-bench
+test split 50 of 2294 issues have fewer than 40 tokens and 168 fewer than
+40 whitespace-separated words (no Lite issue is below either), counted
+with:
+
+```python
+from issuelint.records import load_records
+from issuelint.text import tokens
+
+rs = load_records(f"{DATA}/full/test.parquet")
+print(sum(len(tokens(r.issue)) < 40 for r in rs), sum(len(r.issue.split()) < 40 for r in rs))
+```
 
 | check | score | default threshold |
 | --- | --- | --- |
