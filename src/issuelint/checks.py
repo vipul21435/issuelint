@@ -207,6 +207,10 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
         dict.fromkeys([*_added_test_names(test_patch), *test_names_from_ids(record.fail_to_pass)])
     )
     asserts = [line.strip() for line in test_patch.added_lines() if _ASSERT_RE.match(line)]
+    # An assertion shorter than one n-gram (``assert result``, the opening line
+    # ``self.assertEqual(`` of a call split over lines) cannot be matched by its
+    # n-grams; it stays out of the total instead of counting as never leaked.
+    asserts = [line for line in asserts if ngrams(tokens(line), t.ngram)]
     issue_words = words(record.issue)
     # Whole assertion lines are matched, so every gram counts here, not only informative ones.
     issue_grams = set(ngrams(tokens(record.issue), t.ngram))
@@ -219,8 +223,7 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
             hit += 1
             evidence.append(f"issue names the added test: {name}")
     for line in asserts:
-        grams = ngrams(tokens(line), t.ngram)
-        if grams and all(g in issue_grams for g in grams):
+        if all(g in issue_grams for g in ngrams(tokens(line), t.ngram)):
             hit += 1
             evidence.append(f"issue contains the added assertion: {line}")
     total = len(names) + len(asserts)

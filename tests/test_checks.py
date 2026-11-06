@@ -272,3 +272,18 @@ def test_test_names_match_whole_words_and_title_phrases():
         id="t", issue="it no longer renders the header", patch="", test_patch=test_patch
     )
     assert run_checks(record).finding("test_leakage").score == 0.5
+
+
+def test_assertions_shorter_than_an_ngram_stay_out_of_the_total():
+    test_patch = (
+        "--- a/tests/test_a.py\n+++ b/tests/test_a.py\n@@ -1 +1,4 @@\n"
+        " import a\n+    assert result\n+    self.assertEqual(\n"
+        "+    assert a.parse('1 2') == [1, 2]\n"
+    )
+    issue = "Running `assert result` and then:\n\n    assert a.parse('1 2') == [1, 2]\n    boom\n"
+    f = run_checks(TaskRecord(id="t", issue=issue, patch="", test_patch=test_patch)).finding(
+        "test_leakage"
+    )
+    assert f.metrics["assertions"] == 1
+    assert f.score == 1.0
+    assert f.evidence == ["issue contains the added assertion: assert a.parse('1 2') == [1, 2]"]
