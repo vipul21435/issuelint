@@ -227,7 +227,7 @@ $ issuelint check data/lite/test.parquet --quiet --examples 3
                        e.g. astropy__astropy-12907, astropy__astropy-14365, astropy__astropy-14995
 ```
 
-**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py data --out docs/results.md --chart docs/signal_shares.png`, 61 s on a laptop):
+**All four sets** (`uv run --with matplotlib python examples/swebench_analysis.py data --out docs/results.md --chart docs/signal_shares.png`, 102 s on a laptop; the output is the same on every run):
 
 | check, tasks flagged | Lite (300) | Verified (500) | SWE-bench test (2294) | SWE-Bench+ (548) |
 | --- | ---: | ---: | ---: | ---: |
