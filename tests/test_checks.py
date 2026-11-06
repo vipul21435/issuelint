@@ -140,7 +140,8 @@ def test_evidence_is_capped():
     )
     f = run_checks(_record("short text", patch=patch), t).finding("scope_gap")
     assert len(f.evidence) == 2
-    assert f.evidence[1].startswith("... 4 more")
+    hidden = f.metrics["unmentioned"] + f.metrics["tests_use_new_names"] - 1
+    assert f.evidence[1] == f"... {hidden} more"
 
 
 def test_leakage_score_is_monotone_in_the_pasted_share():

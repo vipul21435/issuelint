@@ -22,6 +22,15 @@ _DEF_RES = (
 _CONTEXT_NAME_RE = re.compile(
     r"\b(?:def|class|function|fn|func|struct|impl|trait)\s+([A-Za-z_$][\w$]*)"
 )
+_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_COMMENT_LINE_RE = re.compile(r"^\s*(?:#|//|/\*|\*)")
+
+
+def code_lines_of(lines: list[str]) -> list[str]:
+    """Lines that are not blank and not a plain comment."""
+    return [line for line in lines if line.strip() and not _COMMENT_LINE_RE.match(line)]
+
+
 _TEST_PATH_RE = re.compile(
     r"(?:^|/)(?:tests?|__tests__|spec|specs|testing)(?:/|$)|(?:^|/)(?:test_[^/]*|[^/]*_test\.[^/]+|[^/]*\.(?:test|spec)\.[^/]+)$"
 )
@@ -78,21 +87,20 @@ class ParsedPatch:
                         break
         return list(seen)
 
-    def new_identifiers(self) -> list[str]:
-        """Names defined on added non-test lines and on no removed line: what the fix introduces."""
+    def new_names(self, min_length: int = 3) -> list[str]:
+        """Identifier tokens on added non-test lines that no removed line contains.
 
-        def defined(lines: list[str]) -> dict[str, None]:
-            found: dict[str, None] = {}
-            for line in lines:
-                for pattern in _DEF_RES:
-                    match = pattern.match(line)
-                    if match:
-                        found.setdefault(match.group("name"), None)
-                        break
-            return found
-
-        removed = defined(self.removed_lines(include_tests=False))
-        return [n for n in defined(self.added_lines(include_tests=False)) if n not in removed]
+        This over-approximates what the fix introduces: a name already present
+        elsewhere in the file but not in the hunk counts as new. Order of first
+        appearance; names shorter than ``min_length`` (``i``, ``x``) are skipped.
+        """
+        removed = set(_NAME_RE.findall("\n".join(self.removed_lines(include_tests=False))))
+        found: dict[str, None] = {}
+        for line in code_lines_of(self.added_lines(include_tests=False)):
+            for name in _NAME_RE.findall(line):
+                if len(name) >= min_length and name not in removed:
+                    found.setdefault(name, None)
+        return list(found)
 
 
 def parse_patch(text: str) -> ParsedPatch:

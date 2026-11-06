@@ -301,28 +301,31 @@ def check_scope_gap(
 ) -> Finding:
     """Changed identifiers the issue never names.
 
-    Also reported, without changing the score: names the gold patch introduces
-    that the added tests use while the issue never mentions them. The SWE-bench
-    Verified annotation instructions single these out as the most common reason
-    a test rejects a reasonable solution.
+    Also reported, without changing the score: names that appear on the gold
+    patch's added lines (and on none of its removed lines), on the test patch's
+    added lines, and nowhere in the issue. The SWE-bench Verified annotation
+    instructions name tests that rely on a new function, variable name or error
+    message absent from the issue as the most common reason a test rejects a
+    reasonable solution.
     """
     idents = patch.changed_identifiers()
     if not idents:
         return Finding("scope_gap", 0.0, False, "patch changes no named definitions")
     issue_words = words(record.issue)
     unmentioned = [name for name in idents if not mentions(issue_words, name)]
-    test_words = words("\n".join(test_patch.added_lines())) if test_patch else set()
+    test_words: set[str] = set()
+    if test_patch:
+        test_words = words("\n".join(code_lines(test_patch.added_lines())))
+        test_words -= words("\n".join(test_patch.removed_lines()))
     needed = [
-        name
-        for name in patch.new_identifiers()
-        if name in test_words and not mentions(issue_words, name)
+        name for name in patch.new_names() if name in test_words and not mentions(issue_words, name)
     ]
     score = len(unmentioned) / len(idents)
     summary = (
         f"{len(unmentioned)} of {len(idents)} changed identifiers never mentioned in the issue"
     )
     evidence = [
-        *(f"tests use {name}, new in the gold patch and absent from the issue" for name in needed),
+        *(f"tests use {name}, added by the gold patch, absent from the issue" for name in needed),
         *(f"changed but not mentioned: {name}" for name in unmentioned if name not in needed),
     ]
     return Finding(
