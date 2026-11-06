@@ -185,7 +185,10 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
     if total == 0:
         return Finding("test_leakage", 0.0, False, "test patch adds no test names or assertions")
     score = hit / total
-    summary = f"{hit} of {len(names)} test names + {len(asserts)} assertions already in the issue"
+    summary = (
+        f"{hit} of {total} ({len(names)} test names, {len(asserts)} assertions) "
+        "already in the issue"
+    )
     return Finding(
         "test_leakage", score, score >= t.test_leakage, summary, _cap(evidence, t.max_evidence)
     )
@@ -210,7 +213,7 @@ def check_location_hints(record: TaskRecord, patch: ParsedPatch, t: Thresholds) 
     if total == 0:
         return Finding("location_hints", 0.0, False, "patch changes no non-test files")
     score = hit / total
-    summary = f"{hit} of {len(paths)} files + {len(idents)} identifiers named in the issue"
+    summary = f"{hit} of {total} ({len(paths)} files, {len(idents)} identifiers) named in the issue"
     return Finding("location_hints", score, False, summary, _cap(evidence, t.max_evidence))
 
 
