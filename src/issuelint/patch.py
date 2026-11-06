@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 
 _FILE_RE = re.compile(r"^diff --git a/(?P<a>\S+) b/(?P<b>\S+)$")
 _PLUS_FILE_RE = re.compile(r"^\+\+\+ (?:b/)?(?P<path>\S+)")
-_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@(?P<context>.*)$")
+_MINUS_FILE_RE = re.compile(r"^--- (?:a/)?(?P<path>\S+)")
+_HUNK_RE = re.compile(r"^@@ -\d+(?:,(?P<old>\d+))? \+\d+(?:,(?P<new>\d+))? @@(?P<context>.*)$")
 
 # Definitions in the languages that dominate public issue-to-fix datasets.
 _DEF_RES = (
@@ -104,10 +105,17 @@ class ParsedPatch:
 
 
 def parse_patch(text: str) -> ParsedPatch:
-    """Parse a unified diff. Lines outside hunks are ignored except file headers."""
+    """Parse a unified diff. Lines outside hunks are ignored except file headers.
+
+    Each hunk ends when the line counts in its ``@@ -a,b +c,d @@`` header are
+    used up, so a ``--- ``/``+++ `` pair after it starts a new file even when
+    the diff has no ``diff --git`` lines (plain ``diff -u`` output).
+    """
     parsed = ParsedPatch()
     current: FileDiff | None = None
     in_hunk = False
+    old_left = new_left = 0
+    old_path = "/dev/null"
     for raw in text.splitlines():
         header = _FILE_RE.match(raw)
         if header:
@@ -115,33 +123,48 @@ def parse_patch(text: str) -> ParsedPatch:
             parsed.files.append(current)
             in_hunk = False
             continue
-        plus = _PLUS_FILE_RE.match(raw)
-        if plus and not in_hunk:
-            path = plus.group("path")
-            if current is None or (current.added or current.removed or current.hunk_contexts):
-                current = FileDiff(path=path)
-                parsed.files.append(current)
-            elif path != "/dev/null":
-                current.path = path
-            continue
-        if raw.startswith("--- ") and not in_hunk:
-            continue
         hunk = _HUNK_RE.match(raw)
         if hunk:
             if current is None:
                 current = FileDiff(path="<unknown>")
                 parsed.files.append(current)
             in_hunk = True
+            old_left = int(hunk.group("old") or 1)
+            new_left = int(hunk.group("new") or 1)
             context = hunk.group("context").strip()
             if context:
                 current.hunk_contexts.append(context)
             continue
-        if current is None or not in_hunk:
+        if in_hunk and current is not None:
+            if raw.startswith("\\"):
+                continue
+            if raw.startswith("+"):
+                current.added.append(raw[1:])
+                new_left -= 1
+            elif raw.startswith("-"):
+                current.removed.append(raw[1:])
+                old_left -= 1
+            else:
+                # A context line; some tools strip the leading space of blank ones.
+                old_left -= 1
+                new_left -= 1
+            if old_left <= 0 and new_left <= 0:
+                in_hunk = False
             continue
-        if raw.startswith("+"):
-            current.added.append(raw[1:])
-        elif raw.startswith("-"):
-            current.removed.append(raw[1:])
-        elif raw.startswith("\\"):
+        minus = _MINUS_FILE_RE.match(raw)
+        if minus:
+            old_path = minus.group("path")
+            continue
+        plus = _PLUS_FILE_RE.match(raw)
+        if plus:
+            path = plus.group("path")
+            if path == "/dev/null":
+                path = old_path  # a deleted file keeps its old name
+            if current is None or (current.added or current.removed or current.hunk_contexts):
+                current = FileDiff(path=path)
+                parsed.files.append(current)
+            elif path != "/dev/null":
+                current.path = path
+            old_path = "/dev/null"
             continue
     return parsed

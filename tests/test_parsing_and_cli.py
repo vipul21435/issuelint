@@ -59,6 +59,54 @@ def test_parse_patch_without_git_header():
     assert p.changed_identifiers() == ["g", "f"]
 
 
+PLAIN_DIFF = """--- a/pkg/one.py
++++ b/pkg/one.py
+@@ -1,2 +1,2 @@
+ def one():
+-    return 1
++    return 2
+--- a/pkg/two.py
++++ b/pkg/two.py
+@@ -1 +1 @@
+-    x = 1
++    x = 2
+--- a/tests/test_two.py
++++ b/tests/test_two.py
+@@ -1,0 +1,2 @@
++def test_two():
++    assert two() == 2
+--- a/pkg/gone.py
++++ /dev/null
+@@ -1 +0,0 @@
+--- not a header
+"""
+
+
+def test_parse_plain_multi_file_diff_splits_files():
+    p = parse_patch(PLAIN_DIFF)
+    assert p.paths == ["pkg/one.py", "pkg/two.py", "tests/test_two.py", "pkg/gone.py"]
+    assert [f.added for f in p.files] == [
+        ["    return 2"],
+        ["    x = 2"],
+        ["def test_two():", "    assert two() == 2"],
+        [],
+    ]
+    assert [f.removed for f in p.files] == [
+        ["    return 1"],
+        ["    x = 1"],
+        [],
+        ["-- not a header"],
+    ]
+    assert [f.is_test for f in p.files] == [False, False, True, False]
+    assert p.added_lines(include_tests=False) == ["    return 2", "    x = 2"]
+
+
+def test_parse_patch_blank_context_line_without_space():
+    p = parse_patch("--- a/a.py\n+++ b/a.py\n@@ -1,3 +1,3 @@\n x = 1\n\n-y = 1\n+y = 2\n")
+    assert p.files[0].added == ["y = 2"]
+    assert p.files[0].removed == ["y = 1"]
+
+
 def test_parse_empty_patch():
     p = parse_patch("")
     assert p.files == []
