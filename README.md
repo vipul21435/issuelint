@@ -39,9 +39,9 @@ pip install "issuelint[parquet] @ git+https://github.com/vipul21435/issuelint"
 ```
 
 Development: in a clone, `uv run --extra dev pytest --cov=issuelint` runs
-the tests offline in about a second; on 2026-11-06 it gave 113 passed and
-99 % line and branch coverage (lowest modules: `cli.py`, `report.py` and
-`text.py`, 98 %).
+the tests offline (5 s warm, 15 s on a first, cold run on 2026-11-06); it
+gave 152 passed and 99 % line and branch coverage (lowest modules: `cli.py`
+and `report.py`, 98 %), the same under Python 3.10 and 3.12.
 
 ## Quickstart
 
