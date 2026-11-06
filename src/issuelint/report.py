@@ -120,6 +120,7 @@ def to_markdown(reports: Iterable[TaskReport], examples: int = 3) -> str:
 
 
 def explain(report: TaskReport) -> str:
+    """Every finding of one task with its score, summary and evidence lines; FLAG marks a flag."""
     lines = [f"{report.id}"]
     for f in report.findings:
         mark = "FLAG" if f.flagged else "    "
@@ -129,10 +130,12 @@ def explain(report: TaskReport) -> str:
 
 
 def to_json(reports: Iterable[TaskReport]) -> str:
+    """The reports as an indented JSON list of ``TaskReport.as_dict()`` objects."""
     return json.dumps([r.as_dict() for r in reports], indent=2)
 
 
 def to_csv(reports: Iterable[TaskReport]) -> str:
+    """One CSV row per task: the id, every check's score, then every check's flag (0 or 1)."""
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["id", *(f"{c}_score" for c in CHECKS), *(f"{c}_flag" for c in CHECKS)])

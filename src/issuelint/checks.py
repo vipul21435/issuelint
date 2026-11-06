@@ -139,6 +139,7 @@ def _issue_code_text(issue: str) -> str:
 
 
 def check_solution_leakage(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Finding:
+    """Share of the gold patch's new-code n-grams in the issue's code; flags at the threshold."""
     # An added line whose tokens equal a removed line's is moved or re-indented code,
     # not new code: an issue that quotes it (often in a traceback) shows the old code.
     removed = {tuple(tokens(line)) for line in patch.removed_lines(include_tests=False)}
@@ -208,7 +209,7 @@ def _added_test_names(test_patch: ParsedPatch) -> list[str]:
 _TEST_ID_NAME_RE = re.compile(r"^(?:test\w*|Test\w*)$")
 
 
-def test_names_from_ids(ids: tuple[str, ...] | list[str]) -> list[str]:
+def names_from_test_ids(ids: tuple[str, ...] | list[str]) -> list[str]:
     """Test function names from test ids such as SWE-bench's FAIL_TO_PASS.
 
     ``path::Class::test_x[param]`` gives ``test_x``; ``test_x (module.Class)`` gives
@@ -242,9 +243,10 @@ def _names_test(issue: str, issue_words: set[str], name: str) -> bool:
 
 
 def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Thresholds) -> Finding:
+    """Share of the tests' names and assertions the issue already gives; flags at the threshold."""
     # FAIL_TO_PASS names the tests that decide the task; when it gives names,
     # test definitions found in the test patch are not read.
-    names = test_names_from_ids(record.fail_to_pass) or _added_test_names(test_patch)
+    names = names_from_test_ids(record.fail_to_pass) or _added_test_names(test_patch)
     asserts = [line.strip() for line in test_patch.added_lines() if _ASSERT_RE.match(line)]
     # An assertion shorter than one n-gram (``assert result``, the opening line
     # ``self.assertEqual(`` of a call split over lines) cannot be matched by its
@@ -282,6 +284,7 @@ def check_test_leakage(record: TaskRecord, test_patch: ParsedPatch, t: Threshold
 
 
 def check_location_hints(record: TaskRecord, patch: ParsedPatch, t: Thresholds) -> Finding:
+    """Share of changed non-test files and identifiers the issue names; never flags."""
     paths = [f.path for f in patch.files if not f.is_test]
     idents = patch.changed_identifiers()
     issue_words = words(record.issue)
@@ -312,6 +315,7 @@ def check_location_hints(record: TaskRecord, patch: ParsedPatch, t: Thresholds) 
 
 
 def check_underspecification(record: TaskRecord, _patch: ParsedPatch, t: Thresholds) -> Finding:
+    """Share of four specification signals the issue lacks; flags at the threshold."""
     issue = record.issue
     has_repro = bool(code_blocks(issue)) or bool(_REPRO_RE.search(issue))
     has_expected = bool(_EXPECTED_RE.search(issue)) and bool(_ACTUAL_RE.search(issue))
@@ -341,6 +345,7 @@ def check_underspecification(record: TaskRecord, _patch: ParsedPatch, t: Thresho
 
 
 def check_external_links(record: TaskRecord, _patch: ParsedPatch, t: Thresholds) -> Finding:
+    """1.0 for links with no code or error text, 0.5 for links beside them, else 0; flags at 1.0."""
     links = urls(record.issue)
     if not links:
         return Finding("external_links", 0.0, False, "no links")
@@ -439,4 +444,5 @@ def run_checks(record: TaskRecord, thresholds: Thresholds | None = None) -> Task
 
 
 def run_all(records: list[TaskRecord], thresholds: Thresholds | None = None) -> list[TaskReport]:
+    """Run every check on each record, in input order."""
     return [run_checks(r, thresholds) for r in records]

@@ -153,6 +153,7 @@ def inline_code(issue: str) -> list[str]:
 
 
 def urls(issue: str) -> list[str]:
+    """The http and https links of a text, trailing punctuation removed."""
     return [u.rstrip(".,;:") for u in _URL_RE.findall(issue)]
 
 
@@ -185,6 +186,7 @@ def words(text: str) -> set[str]:
 
 
 def ngrams(items: list[str], n: int) -> list[tuple[str, ...]]:
+    """Every run of ``n`` consecutive items, in order; ``ValueError`` when ``n`` is not positive."""
     if n <= 0:
         raise ValueError("n must be positive")
     return [tuple(items[i : i + n]) for i in range(len(items) - n + 1)]

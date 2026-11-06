@@ -63,6 +63,7 @@ def _unwritable(path: Path) -> str | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """The argument parser for the ``check`` and ``agree`` subcommands."""
     parser = argparse.ArgumentParser(
         prog="issuelint",
         description="Check issue-to-fix task records for leaks and gaps.",
@@ -183,6 +184,7 @@ def _agree(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the command line; returns 0, 1 with ``--fail-on-flag`` and a flag, 2 on bad input."""
     args = build_parser().parse_args(argv)
     if args.command == "agree":
         return _agree(args)

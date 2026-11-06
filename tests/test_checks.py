@@ -224,7 +224,7 @@ def test_moved_code_quoted_in_a_traceback_is_not_leakage():
 
 
 def test_fail_to_pass_ids_add_test_names():
-    from issuelint.checks import test_names_from_ids
+    from issuelint.checks import names_from_test_ids
     from issuelint.records import RecordError, record_from_dict
 
     ids = [
@@ -234,7 +234,7 @@ def test_fail_to_pass_ids_add_test_names():
         "test_squash (migrations.test_commands.SquashTests)",
         "--squashed-name specifies the new migration's name.",
     ]
-    assert test_names_from_ids(ids) == [
+    assert names_from_test_ids(ids) == [
         "test_invalid_size",
         "test_map",
         "test_issue_10228",
@@ -424,3 +424,11 @@ def test_one_word_titles_count_only_when_quoted(issue: str, score: float):
     test_patch = _js_test_patch("+it('works', () => {\n+  run();\n+});\n")
     f = run_checks(TaskRecord(id="t", issue=issue, patch=DATE_PATCH, test_patch=test_patch))
     assert f.finding("test_leakage").score == score
+
+
+def test_public_names_are_not_collected_by_pytest():
+    import issuelint.checks as checks
+
+    public = [n for n in dir(checks) if not n.startswith("_") and callable(getattr(checks, n))]
+    assert "names_from_test_ids" in public
+    assert [n for n in public if n.startswith("test")] == []
