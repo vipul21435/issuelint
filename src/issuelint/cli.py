@@ -20,7 +20,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"issuelint {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
     check = sub.add_parser("check", help="run every check on a JSONL or JSON file of records")
-    check.add_argument("input", type=Path, help=".jsonl or .json file of task records")
+    check.add_argument("input", type=Path, help=".jsonl, .json or .parquet file of task records")
+    check.add_argument("--limit", type=int, help="check only the first N records")
+    check.add_argument(
+        "--with-hints",
+        action="store_true",
+        help="read the hints (hints_text) together with the issue text",
+    )
     check.add_argument("--explain", action="store_true", help="print evidence for every task")
     check.add_argument("--json", type=Path, metavar="FILE", help="write findings as JSON")
     check.add_argument("--csv", type=Path, metavar="FILE", help="write scores and flags as CSV")
@@ -81,9 +87,10 @@ def main(argv: list[str] | None = None) -> int:
         scope_gap=args.scope_gap,
         min_issue_tokens=args.min_issue_tokens,
         max_evidence=args.max_evidence,
+        with_hints=args.with_hints,
     )
     try:
-        records = load_records(args.input)
+        records = load_records(args.input, limit=args.limit)
     except (RecordError, OSError) as exc:
         print(f"issuelint: {exc}", file=sys.stderr)
         return 2

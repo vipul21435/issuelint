@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from issuelint.patch import ParsedPatch, parse_patch
 from issuelint.records import TaskRecord
@@ -39,7 +39,11 @@ from issuelint.text import (
 
 @dataclass(frozen=True)
 class Thresholds:
-    """Flag cut-offs and sizes; every one is a CLI flag."""
+    """Flag cut-offs and sizes; every one is a CLI flag.
+
+    ``with_hints`` appends the record's hints (in SWE-bench, issue comments made
+    before the fix) to the issue text before the checks read it.
+    """
 
     ngram: int = 6
     solution_leakage: float = 0.2
@@ -48,6 +52,7 @@ class Thresholds:
     scope_gap: float = 0.5
     min_issue_tokens: int = 40
     max_evidence: int = 8
+    with_hints: bool = False
 
 
 @dataclass
@@ -289,6 +294,8 @@ _CheckFn = Callable[[TaskRecord, ParsedPatch, Thresholds], Finding]
 def run_checks(record: TaskRecord, thresholds: Thresholds | None = None) -> TaskReport:
     """Run every check on one record."""
     t = thresholds or Thresholds()
+    if t.with_hints and record.hints.strip():
+        record = replace(record, issue=record.issue_text(with_hints=True))
     patch = parse_patch(record.patch)
     test_patch = parse_patch(record.test_patch)
     findings = [

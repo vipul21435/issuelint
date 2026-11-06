@@ -157,3 +157,45 @@ def test_cli_missing_file_and_version(capsys: pytest.CaptureFixture[str]):
 def test_cli_thresholds_are_flags(capsys: pytest.CaptureFixture[str]):
     assert main(["check", str(SAMPLE), "--quiet", "--scope-gap", "0", "--fail-on-flag"]) == 1
     assert "scope_gap            flagged    4" in capsys.readouterr().out
+
+
+def test_hints_are_read_only_when_asked(tmp_path: Path):
+    from issuelint.checks import Thresholds, run_checks
+
+    row = {
+        "instance_id": "org__repo-1",
+        "problem_statement": "Something is off with the converter.",
+        "hints_text": "See https://example.org/thread for the details.",
+        "patch": "",
+        "test_patch": "",
+    }
+    record = record_from_dict(row)
+    assert record.hints.startswith("See")
+    assert record.issue_text() == record.issue
+    plain = run_checks(record)
+    hinted = run_checks(record, Thresholds(with_hints=True))
+    assert plain.finding("external_links").score == 0.0
+    assert hinted.finding("external_links").score == 1.0
+
+
+def test_parquet_input_and_limit(tmp_path: Path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    rows = [
+        {"instance_id": f"org__repo-{i}", "problem_statement": "x", "patch": "", "test_patch": ""}
+        for i in range(3)
+    ]
+    path = tmp_path / "split.parquet"
+    pq.write_table(pa.Table.from_pylist(rows), path)
+    records = load_records(path)
+    assert [r.id for r in records] == ["org__repo-0", "org__repo-1", "org__repo-2"]
+    assert len(load_records(path, limit=2)) == 2
+    assert main(["check", str(path), "--quiet", "--limit", "1"]) == 0
+
+
+def test_duplicate_ids_are_rejected(tmp_path: Path):
+    path = tmp_path / "dup.jsonl"
+    row = json.dumps({"id": "a", "issue": "x", "patch": ""})
+    path.write_text(f"{row}\n{row}\n", encoding="utf-8")
+    with pytest.raises(RecordError, match="duplicate"):
+        load_records(path)
